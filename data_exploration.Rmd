@@ -1,0 +1,19 @@
+---
+title: "Technical Exercise - Data Exploration"
+output: html_notebook
+---
+
+```{r libraries}
+library(tidyverse)
+```
+
+```{r data loading}
+source("~/Github/applications/savii/data_processing.R")
+```
+
+```{r distribution of train and test dataset}
+table(data_sample$Fold)
+prop.table(table(data_sample$Fold))
+```
+
+

@@ -1,0 +1,15 @@
+---
+title: "Technical Exercise - Model Training"
+output: html_notebook
+---
+
+
+```{r libraries}
+library(tidyverse)
+```
+
+```{r data loading}
+source("~/Github/applications/savii/data_processing.R")
+```
+
+
