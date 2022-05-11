@@ -5,6 +5,7 @@ output: html_notebook
 
 ```{r libraries}
 library(tidyverse)
+library(corrplot)
 ```
 
 ```{r data loading}
@@ -16,4 +17,22 @@ table(data_sample$Fold)
 prop.table(table(data_sample$Fold))
 ```
 
+```{r distribution of each classes in training data}
+table(filter(data_sample, Fold == 'IS')$Target)
+prop.table(table(filter(data_sample, Fold == 'IS')$Target))
+```
 
+```{r distribution of each classes in test data}
+table(filter(data_sample, Fold == 'OS')$Target)
+prop.table(table(filter(data_sample, Fold == 'OS')$Target))
+```
+
+```{r correlation matrix}
+#print table
+print(corr)
+#turn corr back into matrix in order to plot with corrplot
+mtx_corr <- reshape2::acast(corr, Var1~Var2, value.var="Freq")
+  
+#plot correlations visually
+corrplot(mtx_corr, is.corr=FALSE, tl.col="black", na.label=" ")
+```
