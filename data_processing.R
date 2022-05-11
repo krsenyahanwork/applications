@@ -15,6 +15,18 @@ data_dict <- read.csv("~/Downloads/applications/savii/data/data_dictionary.csv",
 data_sample <- data_sample %>%
   select(-X)
 
+## data exclusion and update some values
+## Variables Var29, Var30, Var116 all consists factor levels 0, 1, 2, 5, 10, 20.
+## I decided to update levels that are 2-digits to 1 digit so that it would be easier for 
+## doing the feature selection. Decided to replace 10 with 8, and 20 with 9.
+data_sample <- data_sample %>%
+  mutate(Var29 = ifelse(Var29 == '10', '8',
+                        ifelse(Var29 == '20', '9', Var29)),
+         Var30 = ifelse(Var30 == '10', '8',
+                        ifelse(Var30 == '20', '9', Var30)),
+         Var116 = ifelse(Var116 == '10', '8',
+                         ifelse(Var116 == '20', '9', Var116)))  # update values to only 1-digit
+
 ################################################################################
 # Data type conversion
 # Charcter Types: member identifier and categorically nominal fields
@@ -40,6 +52,8 @@ data_sample <- data_sample %>%
 
 # additional data transformation 
 # this resolves issues that happen during building prediction and prediction models
+data_sample <- data_sample %>%
+  select(-Var12)    # Var12 contains all 0s, this won't be helpful in building models
 
 ################################################################################
 # Split train and test data sets
