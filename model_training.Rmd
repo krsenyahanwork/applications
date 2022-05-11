@@ -8,6 +8,8 @@ output: html_notebook
 library(tidyverse)
 library(ROSE)          # oversampling and undersampling of imbalanced dataset
 library(rpart)         # classification and regression trees
+library(glmnet)
+library(stringi)
 ```
 
 ```{r data loading}
@@ -15,56 +17,181 @@ source("~/Github/applications/savii/data_processing.R")
 ```
 
 ```{r oversampling and balanced the data}
-train_data.balanced_over <- ovun.sample(Target ~., data = select(train_data, -ID, -Fold), method = "over", N = max(table(filter(data_sample, Fold == 'IS')$Target))*2, seed = 1)$data
+train_data.balanced_over <- ovun.sample(Target ~., 
+                                        data = select(train_data, -ID, -Fold), 
+                                        method = "over", 
+                                        N = max(table(filter(data_sample, Fold == 'IS')$Target))*2, 
+                                        seed = 1)$data
 table(train_data.balanced_over$Target)
 ```
 ```{r undersampling and balanced the data}
-train_data.balanced_under <- ovun.sample(Target ~., data = select(train_data, -ID, -Fold), method = "under", N = min(table(filter(data_sample, Fold == 'IS')$Target))*2, seed = 1)$data
+train_data.balanced_under <- ovun.sample(Target ~., 
+                                         data = select(train_data, -ID, -Fold), 
+                                         method = "under", 
+                                         N = min(table(filter(data_sample, Fold == 'IS')$Target))*2, 
+                                         seed = 1)$data
 table(train_data.balanced_under$Target)
 ```
 
 ```{r over/undersampling and balanced the data}
-train_data.balanced_both <- ovun.sample(Target ~., data = select(train_data, -ID, -Fold), method = "both", p = 0.5, N = nrow(train_data), seed = 1)$data
+train_data.balanced_both <- ovun.sample(Target ~., 
+                                        data = select(train_data, -ID, -Fold), 
+                                        method = "both", 
+                                        p = 0.5, 
+                                        N = nrow(train_data), 
+                                        seed = 1)$data
 table(train_data.balanced_both$Target)
 ```
 
-```{r}
-# decsiion tree
-# using actual train_data
-tree_model <- rpart(Target ~., data = select(train_data, -ID, -Fold))
-pred.tree_model <- predict(tree_model, newdata = test_data)
-accuracy.meas(test_data$Target, pred.tree_model)
-roc.curve(test_data$Target, pred.tree_model, plotit = T)
+```{r synthetic and balanced the data}
+train_data.balanced_synth <- ROSE(Target ~., 
+                                  data = select(train_data, -ID, -Fold), 
+                                  seed = 1)$data
+table(train_data.balanced_synth$Target)
 ```
 
-```{r}
-# decsiion tree
-# using train_data without redundant variables
-tree_model <- rpart(Target ~., data = select(train_data_xredun, -ID, -Fold))
-pred.tree_model <- predict(tree_model, newdata = test_data)
-accuracy.meas(test_data$Target, pred.tree_model)
-roc.curve(test_data$Target, pred.tree_model, plotit = T)
+```{r feature selection}
+# Predictor variables
+x <- model.matrix(Target~., select(train_data, -ID, -Fold))[,-1]
+# Outcome variable
+y <- train_data$Target
+
+# LASSO Regression
+# Find the best lambda using cross-validation
+set.seed(1) 
+cv <- cv.glmnet(x, y, alpha = 1)
+# Display the best lambda value
+cv$lambda.min
+
+# Fit the final model on the training data
+lasso.model <- glmnet(x, y, alpha = 1, lambda = cv$lambda.min)
+# Dsiplay regression coefficients
+lasso.model.coefs <- coef(lasso.model)
+sig.lasso.coefs <- lasso.model.coefs@Dimnames[[1]][lasso.model.coefs@i+1]
+sig.lasso.coefs <- as.integer(sub('Var', '', sig.lasso.coefs[-1]))
+
+# variables with numeric type
+# Variables names were only up until 163 (i.e., Var163)
+sig.lasso.coefs_numeric <- sig.lasso.coefs[sig.lasso.coefs < 164] 
+
+# variables with factor type
+# Variables names that exceeds 163 are factor types appended with factor level values
+sig.lasso.coefs_factor <- sig.lasso.coefs[sig.lasso.coefs >= 164]
+sig.lasso.coefs_factor <- stri_reverse(sig.lasso.coefs_factor)
+sig.lasso.coefs_factor <- stri_reverse(sub('.', '', sig.lasso.coefs_factor))
+
+lasso.final_features <- c(sig.lasso.coefs_numeric, sig.lasso.coefs_factor)
+lasso.final_features <- paste('Var', lasso.final_features,  sep = '')
+
+lasso_features_model <- paste(lasso.final_features, collapse = '+')
+lasso_features_model <- paste('Target', lasso_features_model, sep = '~')
 ```
 
-```{r}
-# decsion tree
+#### Classification Tree
+
+```{r CART - Sampled Train Data}
 # using sampled train_data
+tree_model <- rpart(Target ~., data = select(train_data, -ID, -Fold))   # actual train_data
 tree_model.over <- rpart(Target ~., data = train_data.balanced_over)
 tree_model.under <- rpart(Target ~., data = train_data.balanced_under)
 tree_model.both <- rpart(Target ~., data = train_data.balanced_both)
+tree_model.synth <- rpart(Target ~., data = train_data.balanced_synth)
 
 # make predictions on test data
+pred.tree_model <- predict(tree_model, newdata = test_data)
 pred.tree_model.over <- predict(tree_model.over, newdata = test_data)
 pred.tree_model.under <- predict(tree_model.under, newdata = test_data)
 pred.tree_model.both <- predict(tree_model.both, newdata = test_data)
+pred.tree_model.synth <- predict(tree_model.synth, newdata = test_data)
 
 # ROC curves
+roc.curve(test_data$Target, pred.tree_model, plotit = F)
 roc.curve(test_data$Target, pred.tree_model.over, plotit = F)
 roc.curve(test_data$Target, pred.tree_model.under, plotit = F)
 roc.curve(test_data$Target, pred.tree_model.both, plotit = F)
+roc.curve(test_data$Target, pred.tree_model.synth, plotit = F)
 
 # recall, precision, F1-score
+accuracy.meas(test_data$Target, pred.tree_model)
 accuracy.meas(test_data$Target, pred.tree_model.over)
 accuracy.meas(test_data$Target, pred.tree_model.under)
 accuracy.meas(test_data$Target, pred.tree_model.both)
+accuracy.meas(test_data$Target, pred.tree_model.synth)
 ```
+
+```{r CART - Sampled Train Data wo Highly Correlated Variables}
+# using sampled train_data without the redundant variables
+tree_model <- rpart(Target ~., 
+                    data = select(train_data_xredun, -ID, -Fold))     # actual train_data
+tree_model.over <- rpart(Target ~., 
+                         data = train_data.balanced_over[ , !(names(train_data.balanced_over) 
+                                                            %in% redundant_var)])
+tree_model.under <- rpart(Target ~., data = train_data.balanced_under[ , !(names(train_data.balanced_under) 
+                                                                         %in% redundant_var)])
+tree_model.both <- rpart(Target ~., 
+                         data = train_data.balanced_both[ , !(names(train_data.balanced_both) 
+                                                            %in% redundant_var)])
+tree_model.synth <- rpart(Target ~., 
+                         data = train_data.balanced_synth[ , !(names(train_data.balanced_synth) 
+                                                             %in% redundant_var)])
+
+# make predictions on test data
+pred.tree_model <- predict(tree_model, newdata = test_data)
+pred.tree_model.over <- predict(tree_model.over, newdata = test_data)
+pred.tree_model.under <- predict(tree_model.under, newdata = test_data)
+pred.tree_model.both <- predict(tree_model.both, newdata = test_data)
+pred.tree_model.synth <- predict(tree_model.synth, newdata = test_data)
+
+# ROC curves
+roc.curve(test_data$Target, pred.tree_model, plotit = F)
+roc.curve(test_data$Target, pred.tree_model.over, plotit = F)
+roc.curve(test_data$Target, pred.tree_model.under, plotit = F)
+roc.curve(test_data$Target, pred.tree_model.both, plotit = F)
+roc.curve(test_data$Target, pred.tree_model.synth, plotit = F)
+
+# recall, precision, F1-score
+accuracy.meas(test_data$Target, pred.tree_model)
+accuracy.meas(test_data$Target, pred.tree_model.over)
+accuracy.meas(test_data$Target, pred.tree_model.under)
+accuracy.meas(test_data$Target, pred.tree_model.both)
+accuracy.meas(test_data$Target, pred.tree_model.synth)
+```
+
+```{r CART - Sampled Train Data with selected features using LASSO}
+# using sampled train_data + feature selection
+tree_model <- rpart(as.formula(lasso_features_model), 
+                    data = select(train_data, -ID, -Fold))   # actual train_data
+tree_model.over <- rpart(as.formula(lasso_features_model), 
+                         data = train_data.balanced_over)
+tree_model.under <- rpart(as.formula(lasso_features_model), 
+                          data = train_data.balanced_under)
+tree_model.both <- rpart(as.formula(lasso_features_model), 
+                         data = train_data.balanced_both)
+tree_model.synth <- rpart(as.formula(lasso_features_model), 
+                          data = train_data.balanced_synth)
+
+# make predictions on test data
+pred.tree_model <- predict(tree_model, newdata = test_data)
+pred.tree_model.over <- predict(tree_model.over, newdata = test_data)
+pred.tree_model.under <- predict(tree_model.under, newdata = test_data)
+pred.tree_model.both <- predict(tree_model.both, newdata = test_data)
+pred.tree_model.synth <- predict(tree_model.synth, newdata = test_data)
+
+# ROC curves
+roc.curve(test_data$Target, pred.tree_model, plotit = F)
+roc.curve(test_data$Target, pred.tree_model.over, plotit = F)
+roc.curve(test_data$Target, pred.tree_model.under, plotit = F)
+roc.curve(test_data$Target, pred.tree_model.both, plotit = F)
+roc.curve(test_data$Target, pred.tree_model.synth, plotit = F)
+
+# recall, precision, F1-score
+accuracy.meas(test_data$Target, pred.tree_model)
+accuracy.meas(test_data$Target, pred.tree_model.over)
+accuracy.meas(test_data$Target, pred.tree_model.under)
+accuracy.meas(test_data$Target, pred.tree_model.both)
+accuracy.meas(test_data$Target, pred.tree_model.synth)
+```
+
+
+#### Logistic Regression
+
