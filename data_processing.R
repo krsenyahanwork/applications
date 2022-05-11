@@ -50,7 +50,7 @@ test_data <- data_sample %>%
 # train_sample <- train_data[trainIndex,]          # training data for building model/s
 # validation_sample  <- train_data[-trainIndex,]   # test data for building model/s
 
-# We may need to resample due to imbalanced dataset (reference to Target variable)
+
 
 # Remove unused data
 rm(var_to_char, var_to_fct, dum_to_fct)
