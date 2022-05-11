@@ -1770,8 +1770,10 @@ pre code {
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeSh0aWR5dmVyc2UpXG5gYGAifQ== -->
-<pre class="r"><code>library(tidyverse)</code></pre>
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubGlicmFyeSh0aWR5dmVyc2UpXG5saWJyYXJ5KFJPU0UpICAgICAgICAgICMgb3ZlcnNhbXBsaW5nIGFuZCB1bmRlcnNhbXBsaW5nIG9mIGltYmFsYW5jZWQgZGF0YXNldFxubGlicmFyeShycGFydCkgICAgICAgICAjIGNsYXNzaWZpY2F0aW9uIGFuZCByZWdyZXNzaW9uIHRyZWVzXG5gYGAifQ== -->
+<pre class="r"><code>library(tidyverse)
+library(ROSE)          # oversampling and undersampling of imbalanced dataset
+library(rpart)         # classification and regression trees</code></pre>
 <!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
@@ -1783,8 +1785,93 @@ pre code {
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxudHJhaW5fZGF0YS5iYWxhbmNlZF9vdmVyIDwtIG92dW4uc2FtcGxlKFRhcmdldCB+LiwgZGF0YSA9IHNlbGVjdCh0cmFpbl9kYXRhLCAtSUQsIC1Gb2xkKSwgbWV0aG9kID0gXCJvdmVyXCIsIE4gPSBtYXgodGFibGUoZmlsdGVyKGRhdGFfc2FtcGxlLCBGb2xkID09ICdJUycpJFRhcmdldCkpKjIsIHNlZWQgPSAxKSRkYXRhXG50YWJsZSh0cmFpbl9kYXRhLmJhbGFuY2VkX292ZXIkVGFyZ2V0KVxuYGBgIn0= -->
+<pre class="r"><code>train_data.balanced_over &lt;- ovun.sample(Target ~., data = select(train_data, -ID, -Fold), method = &quot;over&quot;, N = max(table(filter(data_sample, Fold == &#39;IS&#39;)$Target))*2, seed = 1)$data
+table(train_data.balanced_over$Target)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiXG4gICAwICAgIDEgXG44MDQzIDgwNDMgXG4ifQ== -->
+<pre><code>
+   0    1 
+8043 8043 </code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxudHJhaW5fZGF0YS5iYWxhbmNlZF91bmRlciA8LSBvdnVuLnNhbXBsZShUYXJnZXQgfi4sIGRhdGEgPSBzZWxlY3QodHJhaW5fZGF0YSwgLUlELCAtRm9sZCksIG1ldGhvZCA9IFwidW5kZXJcIiwgTiA9IG1pbih0YWJsZShmaWx0ZXIoZGF0YV9zYW1wbGUsIEZvbGQgPT0gJ0lTJykkVGFyZ2V0KSkqMiwgc2VlZCA9IDEpJGRhdGFcbnRhYmxlKHRyYWluX2RhdGEuYmFsYW5jZWRfdW5kZXIkVGFyZ2V0KVxuYGBgIn0= -->
+<pre class="r"><code>train_data.balanced_under &lt;- ovun.sample(Target ~., data = select(train_data, -ID, -Fold), method = &quot;under&quot;, N = min(table(filter(data_sample, Fold == &#39;IS&#39;)$Target))*2, seed = 1)$data
+table(train_data.balanced_under$Target)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiXG4gIDAgICAxIFxuMTk5IDE5OSBcbiJ9 -->
+<pre><code>
+  0   1 
+199 199 </code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxudHJhaW5fZGF0YS5iYWxhbmNlZF9ib3RoIDwtIG92dW4uc2FtcGxlKFRhcmdldCB+LiwgZGF0YSA9IHNlbGVjdCh0cmFpbl9kYXRhLCAtSUQsIC1Gb2xkKSwgbWV0aG9kID0gXCJib3RoXCIsIHAgPSAwLjUsIE4gPSBucm93KHRyYWluX2RhdGEpLCBzZWVkID0gMSkkZGF0YVxudGFibGUodHJhaW5fZGF0YS5iYWxhbmNlZF9ib3RoJFRhcmdldClcbmBgYCJ9 -->
+<pre class="r"><code>train_data.balanced_both &lt;- ovun.sample(Target ~., data = select(train_data, -ID, -Fold), method = &quot;both&quot;, p = 0.5, N = nrow(train_data), seed = 1)$data
+table(train_data.balanced_both$Target)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiXG4gICAwICAgIDEgXG40MTU5IDQwODMgXG4ifQ== -->
+<pre><code>
+   0    1 
+4159 4083 </code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyBkZWNzaWlvbiB0cmVlXG4jIHVzaW5nIGFjdHVhbCB0cmFpbl9kYXRhXG50cmVlX21vZGVsIDwtIHJwYXJ0KFRhcmdldCB+LiwgZGF0YSA9IHNlbGVjdCh0cmFpbl9kYXRhLCAtSUQsIC1Gb2xkKSlcbnByZWQudHJlZV9tb2RlbCA8LSBwcmVkaWN0KHRyZWVfbW9kZWwsIG5ld2RhdGEgPSB0ZXN0X2RhdGEpXG5hY2N1cmFjeS5tZWFzKHRlc3RfZGF0YSRUYXJnZXQsIHByZWQudHJlZV9tb2RlbClcbnJvYy5jdXJ2ZSh0ZXN0X2RhdGEkVGFyZ2V0LCBwcmVkLnRyZWVfbW9kZWwsIHBsb3RpdCA9IFQpXG5gYGAifQ== -->
+<pre class="r"><code># decsiion tree
+# using actual train_data
+tree_model &lt;- rpart(Target ~., data = select(train_data, -ID, -Fold))
+pred.tree_model &lt;- predict(tree_model, newdata = test_data)
+accuracy.meas(test_data$Target, pred.tree_model)
+roc.curve(test_data$Target, pred.tree_model, plotit = T)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyBkZWNzaWlvbiB0cmVlXG4jIHVzaW5nIHRyYWluX2RhdGEgd2l0aG91dCByZWR1bmRhbnQgdmFyaWFibGVzXG50cmVlX21vZGVsIDwtIHJwYXJ0KFRhcmdldCB+LiwgZGF0YSA9IHNlbGVjdCh0cmFpbl9kYXRhX3hyZWR1biwgLUlELCAtRm9sZCkpXG5wcmVkLnRyZWVfbW9kZWwgPC0gcHJlZGljdCh0cmVlX21vZGVsLCBuZXdkYXRhID0gdGVzdF9kYXRhKVxuYWNjdXJhY3kubWVhcyh0ZXN0X2RhdGEkVGFyZ2V0LCBwcmVkLnRyZWVfbW9kZWwpXG5yb2MuY3VydmUodGVzdF9kYXRhJFRhcmdldCwgcHJlZC50cmVlX21vZGVsLCBwbG90aXQgPSBUKVxuYGBgIn0= -->
+<pre class="r"><code># decsiion tree
+# using train_data without redundant variables
+tree_model &lt;- rpart(Target ~., data = select(train_data_xredun, -ID, -Fold))
+pred.tree_model &lt;- predict(tree_model, newdata = test_data)
+accuracy.meas(test_data$Target, pred.tree_model)
+roc.curve(test_data$Target, pred.tree_model, plotit = T)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+<!-- rnb-text-begin -->
+<!-- rnb-text-end -->
+<!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuIyBkZWNzaW9uIHRyZWVcbiMgdXNpbmcgc2FtcGxlZCB0cmFpbl9kYXRhXG50cmVlX21vZGVsLm92ZXIgPC0gcnBhcnQoVGFyZ2V0IH4uLCBkYXRhID0gdHJhaW5fZGF0YS5iYWxhbmNlZF9vdmVyKVxudHJlZV9tb2RlbC51bmRlciA8LSBycGFydChUYXJnZXQgfi4sIGRhdGEgPSB0cmFpbl9kYXRhLmJhbGFuY2VkX3VuZGVyKVxudHJlZV9tb2RlbC5ib3RoIDwtIHJwYXJ0KFRhcmdldCB+LiwgZGF0YSA9IHRyYWluX2RhdGEuYmFsYW5jZWRfYm90aClcblxuIyBtYWtlIHByZWRpY3Rpb25zIG9uIHRlc3QgZGF0YVxucHJlZC50cmVlX21vZGVsLm92ZXIgPC0gcHJlZGljdCh0cmVlX21vZGVsLm92ZXIsIG5ld2RhdGEgPSB0ZXN0X2RhdGEpXG5wcmVkLnRyZWVfbW9kZWwudW5kZXIgPC0gcHJlZGljdCh0cmVlX21vZGVsLnVuZGVyLCBuZXdkYXRhID0gdGVzdF9kYXRhKVxucHJlZC50cmVlX21vZGVsLmJvdGggPC0gcHJlZGljdCh0cmVlX21vZGVsLmJvdGgsIG5ld2RhdGEgPSB0ZXN0X2RhdGEpXG5cbiMgUk9DIGN1cnZlc1xucm9jLmN1cnZlKHRlc3RfZGF0YSRUYXJnZXQsIHByZWQudHJlZV9tb2RlbC5vdmVyLCBwbG90aXQgPSBGKVxucm9jLmN1cnZlKHRlc3RfZGF0YSRUYXJnZXQsIHByZWQudHJlZV9tb2RlbC51bmRlciwgcGxvdGl0ID0gRilcbnJvYy5jdXJ2ZSh0ZXN0X2RhdGEkVGFyZ2V0LCBwcmVkLnRyZWVfbW9kZWwuYm90aCwgcGxvdGl0ID0gRilcblxuIyByZWNhbGwsIHByZWNpc2lvbiwgRjEtc2NvcmVcbmFjY3VyYWN5Lm1lYXModGVzdF9kYXRhJFRhcmdldCwgcHJlZC50cmVlX21vZGVsLm92ZXIpXG5hY2N1cmFjeS5tZWFzKHRlc3RfZGF0YSRUYXJnZXQsIHByZWQudHJlZV9tb2RlbC51bmRlcilcbmFjY3VyYWN5Lm1lYXModGVzdF9kYXRhJFRhcmdldCwgcHJlZC50cmVlX21vZGVsLmJvdGgpXG5gYGAifQ== -->
+<pre class="r"><code># decsion tree
+# using sampled train_data
+tree_model.over &lt;- rpart(Target ~., data = train_data.balanced_over)
+tree_model.under &lt;- rpart(Target ~., data = train_data.balanced_under)
+tree_model.both &lt;- rpart(Target ~., data = train_data.balanced_both)
 
-<div id="rmd-source-code">LS0tCnRpdGxlOiAiVGVjaG5pY2FsIEV4ZXJjaXNlIC0gTW9kZWwgVHJhaW5pbmciCm91dHB1dDogaHRtbF9ub3RlYm9vawotLS0KCgpgYGB7ciBsaWJyYXJpZXN9CmxpYnJhcnkodGlkeXZlcnNlKQpgYGAKCmBgYHtyIGRhdGEgbG9hZGluZ30Kc291cmNlKCJ+L0dpdGh1Yi9hcHBsaWNhdGlvbnMvc2F2aWkvZGF0YV9wcm9jZXNzaW5nLlIiKQpgYGAKCgo=</div>
+# make predictions on test data
+pred.tree_model.over &lt;- predict(tree_model.over, newdata = test_data)
+pred.tree_model.under &lt;- predict(tree_model.under, newdata = test_data)
+pred.tree_model.both &lt;- predict(tree_model.both, newdata = test_data)
+
+# ROC curves
+roc.curve(test_data$Target, pred.tree_model.over, plotit = F)
+roc.curve(test_data$Target, pred.tree_model.under, plotit = F)
+roc.curve(test_data$Target, pred.tree_model.both, plotit = F)
+
+# recall, precision, F1-score
+accuracy.meas(test_data$Target, pred.tree_model.over)
+accuracy.meas(test_data$Target, pred.tree_model.under)
+accuracy.meas(test_data$Target, pred.tree_model.both)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-chunk-end -->
+
+<div id="rmd-source-code">LS0tCnRpdGxlOiAiVGVjaG5pY2FsIEV4ZXJjaXNlIC0gTW9kZWwgVHJhaW5pbmciCm91dHB1dDogaHRtbF9ub3RlYm9vawotLS0KCgpgYGB7ciBsaWJyYXJpZXN9CmxpYnJhcnkodGlkeXZlcnNlKQpsaWJyYXJ5KFJPU0UpICAgICAgICAgICMgb3ZlcnNhbXBsaW5nIGFuZCB1bmRlcnNhbXBsaW5nIG9mIGltYmFsYW5jZWQgZGF0YXNldApsaWJyYXJ5KHJwYXJ0KSAgICAgICAgICMgY2xhc3NpZmljYXRpb24gYW5kIHJlZ3Jlc3Npb24gdHJlZXMKYGBgCgpgYGB7ciBkYXRhIGxvYWRpbmd9CnNvdXJjZSgifi9HaXRodWIvYXBwbGljYXRpb25zL3NhdmlpL2RhdGFfcHJvY2Vzc2luZy5SIikKYGBgCgpgYGB7ciBvdmVyc2FtcGxpbmcgYW5kIGJhbGFuY2VkIHRoZSBkYXRhfQp0cmFpbl9kYXRhLmJhbGFuY2VkX292ZXIgPC0gb3Z1bi5zYW1wbGUoVGFyZ2V0IH4uLCBkYXRhID0gc2VsZWN0KHRyYWluX2RhdGEsIC1JRCwgLUZvbGQpLCBtZXRob2QgPSAib3ZlciIsIE4gPSBtYXgodGFibGUoZmlsdGVyKGRhdGFfc2FtcGxlLCBGb2xkID09ICdJUycpJFRhcmdldCkpKjIsIHNlZWQgPSAxKSRkYXRhCnRhYmxlKHRyYWluX2RhdGEuYmFsYW5jZWRfb3ZlciRUYXJnZXQpCmBgYApgYGB7ciB1bmRlcnNhbXBsaW5nIGFuZCBiYWxhbmNlZCB0aGUgZGF0YX0KdHJhaW5fZGF0YS5iYWxhbmNlZF91bmRlciA8LSBvdnVuLnNhbXBsZShUYXJnZXQgfi4sIGRhdGEgPSBzZWxlY3QodHJhaW5fZGF0YSwgLUlELCAtRm9sZCksIG1ldGhvZCA9ICJ1bmRlciIsIE4gPSBtaW4odGFibGUoZmlsdGVyKGRhdGFfc2FtcGxlLCBGb2xkID09ICdJUycpJFRhcmdldCkpKjIsIHNlZWQgPSAxKSRkYXRhCnRhYmxlKHRyYWluX2RhdGEuYmFsYW5jZWRfdW5kZXIkVGFyZ2V0KQpgYGAKCmBgYHtyIG92ZXIvdW5kZXJzYW1wbGluZyBhbmQgYmFsYW5jZWQgdGhlIGRhdGF9CnRyYWluX2RhdGEuYmFsYW5jZWRfYm90aCA8LSBvdnVuLnNhbXBsZShUYXJnZXQgfi4sIGRhdGEgPSBzZWxlY3QodHJhaW5fZGF0YSwgLUlELCAtRm9sZCksIG1ldGhvZCA9ICJib3RoIiwgcCA9IDAuNSwgTiA9IG5yb3codHJhaW5fZGF0YSksIHNlZWQgPSAxKSRkYXRhCnRhYmxlKHRyYWluX2RhdGEuYmFsYW5jZWRfYm90aCRUYXJnZXQpCmBgYAoKYGBge3J9CiMgZGVjc2lpb24gdHJlZQojIHVzaW5nIGFjdHVhbCB0cmFpbl9kYXRhCnRyZWVfbW9kZWwgPC0gcnBhcnQoVGFyZ2V0IH4uLCBkYXRhID0gc2VsZWN0KHRyYWluX2RhdGEsIC1JRCwgLUZvbGQpKQpwcmVkLnRyZWVfbW9kZWwgPC0gcHJlZGljdCh0cmVlX21vZGVsLCBuZXdkYXRhID0gdGVzdF9kYXRhKQphY2N1cmFjeS5tZWFzKHRlc3RfZGF0YSRUYXJnZXQsIHByZWQudHJlZV9tb2RlbCkKcm9jLmN1cnZlKHRlc3RfZGF0YSRUYXJnZXQsIHByZWQudHJlZV9tb2RlbCwgcGxvdGl0ID0gVCkKYGBgCgpgYGB7cn0KIyBkZWNzaWlvbiB0cmVlCiMgdXNpbmcgdHJhaW5fZGF0YSB3aXRob3V0IHJlZHVuZGFudCB2YXJpYWJsZXMKdHJlZV9tb2RlbCA8LSBycGFydChUYXJnZXQgfi4sIGRhdGEgPSBzZWxlY3QodHJhaW5fZGF0YV94cmVkdW4sIC1JRCwgLUZvbGQpKQpwcmVkLnRyZWVfbW9kZWwgPC0gcHJlZGljdCh0cmVlX21vZGVsLCBuZXdkYXRhID0gdGVzdF9kYXRhKQphY2N1cmFjeS5tZWFzKHRlc3RfZGF0YSRUYXJnZXQsIHByZWQudHJlZV9tb2RlbCkKcm9jLmN1cnZlKHRlc3RfZGF0YSRUYXJnZXQsIHByZWQudHJlZV9tb2RlbCwgcGxvdGl0ID0gVCkKYGBgCgpgYGB7cn0KIyBkZWNzaW9uIHRyZWUKIyB1c2luZyBzYW1wbGVkIHRyYWluX2RhdGEKdHJlZV9tb2RlbC5vdmVyIDwtIHJwYXJ0KFRhcmdldCB+LiwgZGF0YSA9IHRyYWluX2RhdGEuYmFsYW5jZWRfb3ZlcikKdHJlZV9tb2RlbC51bmRlciA8LSBycGFydChUYXJnZXQgfi4sIGRhdGEgPSB0cmFpbl9kYXRhLmJhbGFuY2VkX3VuZGVyKQp0cmVlX21vZGVsLmJvdGggPC0gcnBhcnQoVGFyZ2V0IH4uLCBkYXRhID0gdHJhaW5fZGF0YS5iYWxhbmNlZF9ib3RoKQoKIyBtYWtlIHByZWRpY3Rpb25zIG9uIHRlc3QgZGF0YQpwcmVkLnRyZWVfbW9kZWwub3ZlciA8LSBwcmVkaWN0KHRyZWVfbW9kZWwub3ZlciwgbmV3ZGF0YSA9IHRlc3RfZGF0YSkKcHJlZC50cmVlX21vZGVsLnVuZGVyIDwtIHByZWRpY3QodHJlZV9tb2RlbC51bmRlciwgbmV3ZGF0YSA9IHRlc3RfZGF0YSkKcHJlZC50cmVlX21vZGVsLmJvdGggPC0gcHJlZGljdCh0cmVlX21vZGVsLmJvdGgsIG5ld2RhdGEgPSB0ZXN0X2RhdGEpCgojIFJPQyBjdXJ2ZXMKcm9jLmN1cnZlKHRlc3RfZGF0YSRUYXJnZXQsIHByZWQudHJlZV9tb2RlbC5vdmVyLCBwbG90aXQgPSBGKQpyb2MuY3VydmUodGVzdF9kYXRhJFRhcmdldCwgcHJlZC50cmVlX21vZGVsLnVuZGVyLCBwbG90aXQgPSBGKQpyb2MuY3VydmUodGVzdF9kYXRhJFRhcmdldCwgcHJlZC50cmVlX21vZGVsLmJvdGgsIHBsb3RpdCA9IEYpCgojIHJlY2FsbCwgcHJlY2lzaW9uLCBGMS1zY29yZQphY2N1cmFjeS5tZWFzKHRlc3RfZGF0YSRUYXJnZXQsIHByZWQudHJlZV9tb2RlbC5vdmVyKQphY2N1cmFjeS5tZWFzKHRlc3RfZGF0YSRUYXJnZXQsIHByZWQudHJlZV9tb2RlbC51bmRlcikKYWNjdXJhY3kubWVhcyh0ZXN0X2RhdGEkVGFyZ2V0LCBwcmVkLnRyZWVfbW9kZWwuYm90aCkKYGBgCg==</div>
 
 
 
@@ -1831,7 +1918,7 @@ $(document).ready(function () {
 <!-- code folding -->
 <script>
 $(document).ready(function () {
-  window.initializeSourceEmbed("prediction_model.Rmd");
+  window.initializeSourceEmbed("model_training.Rmd");
   window.initializeCodeFolding("show" === "show");
 });
 </script>

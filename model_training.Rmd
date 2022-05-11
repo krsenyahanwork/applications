@@ -6,10 +6,65 @@ output: html_notebook
 
 ```{r libraries}
 library(tidyverse)
+library(ROSE)          # oversampling and undersampling of imbalanced dataset
+library(rpart)         # classification and regression trees
 ```
 
 ```{r data loading}
 source("~/Github/applications/savii/data_processing.R")
 ```
 
+```{r oversampling and balanced the data}
+train_data.balanced_over <- ovun.sample(Target ~., data = select(train_data, -ID, -Fold), method = "over", N = max(table(filter(data_sample, Fold == 'IS')$Target))*2, seed = 1)$data
+table(train_data.balanced_over$Target)
+```
+```{r undersampling and balanced the data}
+train_data.balanced_under <- ovun.sample(Target ~., data = select(train_data, -ID, -Fold), method = "under", N = min(table(filter(data_sample, Fold == 'IS')$Target))*2, seed = 1)$data
+table(train_data.balanced_under$Target)
+```
 
+```{r over/undersampling and balanced the data}
+train_data.balanced_both <- ovun.sample(Target ~., data = select(train_data, -ID, -Fold), method = "both", p = 0.5, N = nrow(train_data), seed = 1)$data
+table(train_data.balanced_both$Target)
+```
+
+```{r}
+# decsiion tree
+# using actual train_data
+tree_model <- rpart(Target ~., data = select(train_data, -ID, -Fold))
+pred.tree_model <- predict(tree_model, newdata = test_data)
+accuracy.meas(test_data$Target, pred.tree_model)
+roc.curve(test_data$Target, pred.tree_model, plotit = T)
+```
+
+```{r}
+# decsiion tree
+# using train_data without redundant variables
+tree_model <- rpart(Target ~., data = select(train_data_xredun, -ID, -Fold))
+pred.tree_model <- predict(tree_model, newdata = test_data)
+accuracy.meas(test_data$Target, pred.tree_model)
+roc.curve(test_data$Target, pred.tree_model, plotit = T)
+```
+
+```{r}
+# decsion tree
+# using sampled train_data
+tree_model.over <- rpart(Target ~., data = train_data.balanced_over)
+tree_model.under <- rpart(Target ~., data = train_data.balanced_under)
+tree_model.both <- rpart(Target ~., data = train_data.balanced_both)
+
+# make predictions on test data
+pred.tree_model.over <- predict(tree_model.over, newdata = test_data)
+pred.tree_model.under <- predict(tree_model.under, newdata = test_data)
+pred.tree_model.both <- predict(tree_model.both, newdata = test_data)
+
+# ROC curves
+roc.curve(test_data$Target, pred.tree_model.over, plotit = F)
+roc.curve(test_data$Target, pred.tree_model.under, plotit = F)
+roc.curve(test_data$Target, pred.tree_model.both, plotit = F)
+
+# recall, precision, F1-score
+accuracy.meas(test_data$Target, pred.tree_model.over)
+accuracy.meas(test_data$Target, pred.tree_model.under)
+accuracy.meas(test_data$Target, pred.tree_model.both)
+```
