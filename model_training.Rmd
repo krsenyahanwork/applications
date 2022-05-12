@@ -11,11 +11,14 @@ library(rpart)         # classification and regression trees
 library(glmnet)
 library(stringi)
 library(randomForest)
+library(PRROC)
 ```
 
 ```{r data loading}
 source("~/Github/applications/savii/data_processing.R")
 ```
+
+### Data Sampling
 
 ```{r oversampling and balanced the data}
 train_data.balanced_over <- ovun.sample(Target ~., 
@@ -23,14 +26,27 @@ train_data.balanced_over <- ovun.sample(Target ~.,
                                         method = "over", 
                                         N = max(table(filter(data_sample, Fold == 'IS')$Target))*2, 
                                         seed = 1)$data
+
+train_data_transf.balanced_over <- ovun.sample(Target ~., 
+                                               data = select(train_data_transf, -ID, -Fold), 
+                                               method = "over", 
+                                               N = max(table(filter(data_sample, Fold == 'IS')$Target))*2, 
+                                               seed = 1)$data
 table(train_data.balanced_over$Target)
 ```
+
 ```{r undersampling and balanced the data}
 train_data.balanced_under <- ovun.sample(Target ~., 
                                          data = select(train_data, -ID, -Fold), 
                                          method = "under", 
                                          N = min(table(filter(data_sample, Fold == 'IS')$Target))*2, 
                                          seed = 1)$data
+
+train_data_transf.balanced_under <- ovun.sample(Target ~., 
+                                                data = select(train_data_transf, -ID, -Fold), 
+                                                method = "under", 
+                                                N = min(table(filter(data_sample, Fold == 'IS')$Target))*2, 
+                                                seed = 1)$data
 table(train_data.balanced_under$Target)
 ```
 
@@ -41,6 +57,12 @@ train_data.balanced_both <- ovun.sample(Target ~.,
                                         p = 0.5, 
                                         N = nrow(train_data), 
                                         seed = 1)$data
+train_data_transf.balanced_both <- ovun.sample(Target ~., 
+                                               data = select(train_data_transf, -ID, -Fold), 
+                                               method = "both", 
+                                               p = 0.5, 
+                                               N = nrow(train_data), 
+                                               seed = 1)$data
 table(train_data.balanced_both$Target)
 ```
 
@@ -48,8 +70,14 @@ table(train_data.balanced_both$Target)
 train_data.balanced_synth <- ROSE(Target ~., 
                                   data = select(train_data, -ID, -Fold), 
                                   seed = 1)$data
+
+train_data_transf.balanced_synth <- ROSE(Target ~., 
+                                         data = select(train_data_transf, -ID, -Fold), 
+                                         seed = 1)$data
 table(train_data.balanced_synth$Target)
 ```
+
+### Feature Selection
 
 ```{r feature selection}
 # Predictor variables
@@ -89,6 +117,10 @@ lasso.final_features <- paste('Var', lasso.final_features,  sep = '')
 # create a model formula with the features obtained from LASSO
 lasso_features_model <- paste(lasso.final_features, collapse = '+')
 lasso_features_model <- paste('Target', lasso_features_model, sep = '~')
+lasso_features_model2 <- paste('Target_fct', lasso_features_model, sep = '~')
+
+rm(sig.lasso.coefs, sig.lasso.coefs_factor, sig.lasso.coefs_numeric)
+rm(x, y)
 ```
 
 #### Classification Tree
@@ -109,11 +141,18 @@ pred.tree_model.both <- predict(tree_model.both, newdata = test_data)
 pred.tree_model.synth <- predict(tree_model.synth, newdata = test_data)
 
 # ROC curves
-roc.curve(test_data$Target, pred.tree_model, plotit = F)
-roc.curve(test_data$Target, pred.tree_model.over, plotit = F)
-roc.curve(test_data$Target, pred.tree_model.under, plotit = F)
-roc.curve(test_data$Target, pred.tree_model.both, plotit = F)
-roc.curve(test_data$Target, pred.tree_model.synth, plotit = F)
+ROSE::roc.curve(test_data$Target, pred.tree_model, plotit = T)
+ROSE::roc.curve(test_data$Target, pred.tree_model.over, plotit = T)
+ROSE::roc.curve(test_data$Target, pred.tree_model.under, plotit = T)
+ROSE::roc.curve(test_data$Target, pred.tree_model.both, plotit = T)
+ROSE::roc.curve(test_data$Target, pred.tree_model.synth, plotit = T)
+
+# PRROC curves
+plot(pr.curve(test_data$Target, pred.tree_model, curve = T))
+plot(pr.curve(test_data$Target, pred.tree_model.over, curve = T))
+plot(pr.curve(test_data$Target, pred.tree_model.under, curve = T))
+plot(pr.curve(test_data$Target, pred.tree_model.both, curve = T))
+plot(pr.curve(test_data$Target, pred.tree_model.synth,, curve = T))
 
 # Test Probabilities/Responses = 0.5
 testProbs <- data.frame(obs = factor(ifelse(test_data$Target == '1', 'Event', 'No Event')),
@@ -166,95 +205,275 @@ pred.tree_model.both <- predict(tree_model.both, newdata = test_data)
 pred.tree_model.synth <- predict(tree_model.synth, newdata = test_data)
 
 # ROC curves
-roc.curve(test_data$Target, pred.tree_model, plotit = F)
-roc.curve(test_data$Target, pred.tree_model.over, plotit = F)
-roc.curve(test_data$Target, pred.tree_model.under, plotit = F)
-roc.curve(test_data$Target, pred.tree_model.both, plotit = F)
-roc.curve(test_data$Target, pred.tree_model.synth, plotit = F)
+ROSE::roc.curve(test_data$Target, pred.tree_model, plotit = T)
+ROSE::roc.curve(test_data$Target, pred.tree_model.over, plotit = T)
+ROSE::roc.curve(test_data$Target, pred.tree_model.under, plotit = T)
+ROSE::roc.curve(test_data$Target, pred.tree_model.both, plotit = T)
+ROSE::roc.curve(test_data$Target, pred.tree_model.synth, plotit = T)
 
-# recall, precision, F1-score
-accuracy.meas(test_data$Target, pred.tree_model)
-accuracy.meas(test_data$Target, pred.tree_model.over)
-accuracy.meas(test_data$Target, pred.tree_model.under)
-accuracy.meas(test_data$Target, pred.tree_model.both)
-accuracy.meas(test_data$Target, pred.tree_model.synth)
+# PRROC curves
+plot(pr.curve(test_data$Target, pred.tree_model, curve = T))
+plot(pr.curve(test_data$Target, pred.tree_model.over, curve = T))
+plot(pr.curve(test_data$Target, pred.tree_model.under, curve = T))
+plot(pr.curve(test_data$Target, pred.tree_model.both, curve = T))
+plot(pr.curve(test_data$Target, pred.tree_model.synth,, curve = T))
+
+# Test Probabilities/Responses = 0.5
+testProbs.hcv <- data.frame(obs = factor(ifelse(test_data$Target == '1', 'Event', 'No Event')),
+                        pred.tree.act = pred.tree_model,
+                        pred.tree.over = pred.tree_model.over,
+                        pred.tree.under = pred.tree_model.under,
+                        pred.tree.both = pred.tree_model.both,
+                        pred.tree.synth = pred.tree_model.synth,
+                        resp.tree.act = factor(ifelse(pred.tree_model >= 0.5, 'Event', 'No Event')),
+                        resp.tree.over = factor(ifelse(pred.tree_model.over >= 0.5, 'Event', 'No Event')),
+                        resp.tree.under = factor(ifelse(pred.tree_model.under >= 0.5, 'Event', 'No Event')),
+                        resp.tree.both = factor(ifelse(pred.tree_model.both >= 0.5, 'Event', 'No Event')),
+                        resp.tree.synth = factor(ifelse(pred.tree_model.synth >= 0.5, 'Event', 'No Event')))
+
+# confusion matrix
+confusionMatrix(data = testProbs.hcv$resp.tree.act, reference = testProbs.hcv$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.hcv$resp.tree.over, reference = testProbs.hcv$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.hcv$resp.tree.under, reference = testProbs.hcv$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.hcv$resp.tree.both, reference = testProbs.hcv$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.hcv$resp.tree.synth, reference = testProbs.hcv$obs, mode = "prec_recall")
+
+# calibration plot
+calPlotData <- calibration(obs ~ pred.tree.act + pred.tree.over + pred.tree.under + pred.tree.both + pred.tree.synth, data = testProbs.hcv)
+xyplot(calPlotData, auto.key = list(columns = 2))
+
+rm(pred.tree_model, pred.tree_model.over, pred.tree_model.under, pred.tree_model.both, pred.tree_model.synth)
 ```
 
 ```{r CART - Sampled Train Data with selected features using LASSO}
 # using sampled train_data + feature selection
-tree_model <- rpart(as.formula(lasso_features_model), 
+tree_model.fs <- rpart(as.formula(lasso_features_model), 
                     data = select(train_data, -ID, -Fold))   # actual train_data
-tree_model.over <- rpart(as.formula(lasso_features_model), 
+tree_model.over.fs <- rpart(as.formula(lasso_features_model), 
                          data = train_data.balanced_over)
-tree_model.under <- rpart(as.formula(lasso_features_model), 
+tree_model.under.fs <- rpart(as.formula(lasso_features_model), 
                           data = train_data.balanced_under)
-tree_model.both <- rpart(as.formula(lasso_features_model), 
+tree_model.both.fs <- rpart(as.formula(lasso_features_model), 
                          data = train_data.balanced_both)
-tree_model.synth <- rpart(as.formula(lasso_features_model), 
+tree_model.synth.fs <- rpart(as.formula(lasso_features_model), 
                           data = train_data.balanced_synth)
 
 # make predictions on test data
-pred.tree_model <- predict(tree_model, newdata = test_data)
-pred.tree_model.over <- predict(tree_model.over, newdata = test_data)
-pred.tree_model.under <- predict(tree_model.under, newdata = test_data)
-pred.tree_model.both <- predict(tree_model.both, newdata = test_data)
-pred.tree_model.synth <- predict(tree_model.synth, newdata = test_data)
+pred.tree_model <- predict(tree_model.fs, newdata = test_data)
+pred.tree_model.over <- predict(tree_model.over.fs, newdata = test_data)
+pred.tree_model.under <- predict(tree_model.under.fs, newdata = test_data)
+pred.tree_model.both <- predict(tree_model.both.fs, newdata = test_data)
+pred.tree_model.synth <- predict(tree_model.synth.fs, newdata = test_data)
 
 # ROC curves
-roc.curve(test_data$Target, pred.tree_model, plotit = F)
-roc.curve(test_data$Target, pred.tree_model.over, plotit = F)
-roc.curve(test_data$Target, pred.tree_model.under, plotit = F)
-roc.curve(test_data$Target, pred.tree_model.both, plotit = F)
-roc.curve(test_data$Target, pred.tree_model.synth, plotit = F)
+ROSE::roc.curve(test_data$Target, pred.tree_model, plotit = T)
+ROSE::roc.curve(test_data$Target, pred.tree_model.over, plotit = T)
+ROSE::roc.curve(test_data$Target, pred.tree_model.under, plotit = T)
+ROSE::roc.curve(test_data$Target, pred.tree_model.both, plotit = T)
+ROSE::roc.curve(test_data$Target, pred.tree_model.synth, plotit = T)
 
-# recall, precision, F1-score
-accuracy.meas(test_data$Target, pred.tree_model)
-accuracy.meas(test_data$Target, pred.tree_model.over)
-accuracy.meas(test_data$Target, pred.tree_model.under)
-accuracy.meas(test_data$Target, pred.tree_model.both)
-accuracy.meas(test_data$Target, pred.tree_model.synth)
+# PRROC curves
+plot(pr.curve(test_data$Target, pred.tree_model, curve = T))
+plot(pr.curve(test_data$Target, pred.tree_model.over, curve = T))
+plot(pr.curve(test_data$Target, pred.tree_model.under, curve = T))
+plot(pr.curve(test_data$Target, pred.tree_model.both, curve = T))
+plot(pr.curve(test_data$Target, pred.tree_model.synth,, curve = T))
+
+# Test Probabilities/Responses = 0.5
+testProbs.fs <- data.frame(obs = factor(ifelse(test_data$Target == '1', 'Event', 'No Event')),
+                        pred.tree.act = pred.tree_model,
+                        pred.tree.over = pred.tree_model.over,
+                        pred.tree.under = pred.tree_model.under,
+                        pred.tree.both = pred.tree_model.both,
+                        pred.tree.synth = pred.tree_model.synth,
+                        resp.tree.act = factor(ifelse(pred.tree_model >= 0.5, 'Event', 'No Event')),
+                        resp.tree.over = factor(ifelse(pred.tree_model.over >= 0.5, 'Event', 'No Event')),
+                        resp.tree.under = factor(ifelse(pred.tree_model.under >= 0.5, 'Event', 'No Event')),
+                        resp.tree.both = factor(ifelse(pred.tree_model.both >= 0.5, 'Event', 'No Event')),
+                        resp.tree.synth = factor(ifelse(pred.tree_model.synth >= 0.5, 'Event', 'No Event')))
+
+# confusion matrix
+confusionMatrix(data = testProbs.fs$resp.tree.act, reference = testProbs.fs$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.fs$resp.tree.over, reference = testProbs.fs$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.fs$resp.tree.under, reference = testProbs.fs$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.fs$resp.tree.both, reference = testProbs.fs$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.fs$resp.tree.synth, reference = testProbs.fs$obs, mode = "prec_recall")
+
+# calibration plot
+calPlotData <- calibration(obs ~ pred.tree.act + pred.tree.over + pred.tree.under + pred.tree.both + pred.tree.synth, data = testProbs.fs)
+xyplot(calPlotData, auto.key = list(columns = 2))
+
+rm(pred.tree_model, pred.tree_model.over, pred.tree_model.under, pred.tree_model.both, pred.tree_model.synth)
 ```
+
+```{r CART - Sampled Train Data with Transformed fields}
+# using sampled train_data
+tree_model.transf <- rpart(Target ~., data = select(train_data_transf, -ID, -Fold, -Target_fct))           # actual train_data
+tree_model.over.transf <- rpart(Target ~., data = select(train_data_transf.balanced_over, -Target_fct))
+tree_model.under.transf <- rpart(Target ~., data = select(train_data_transf.balanced_under, -Target_fct))
+tree_model.both.transf <- rpart(Target ~., data = select(train_data_transf.balanced_both, -Target_fct))
+tree_model.synth.transf <- rpart(Target ~., data = select(train_data_transf.balanced_synth, -Target_fct))
+
+# make predictions on test data
+pred.tree_model <- predict(tree_model.transf, newdata = test_data_transf)
+pred.tree_model.over <- predict(tree_model.over.transf, newdata = test_data_transf)
+pred.tree_model.under <- predict(tree_model.under.transf, newdata = test_data_transf)
+pred.tree_model.both <- predict(tree_model.both.transf, newdata = test_data_transf)
+pred.tree_model.synth <- predict(tree_model.synth.transf, newdata = test_data_transf)
+
+# ROC curves
+ROSE::roc.curve(test_data_transf$Target, pred.tree_model, plotit = T)
+ROSE::roc.curve(test_data_transf$Target, pred.tree_model.over, plotit = T)
+ROSE::roc.curve(test_data_transf$Target, pred.tree_model.under, plotit = T)
+ROSE::roc.curve(test_data_transf$Target, pred.tree_model.both, plotit = T)
+ROSE::roc.curve(test_data_transf$Target, pred.tree_model.synth, plotit = T)
+
+# PRROC curves
+plot(pr.curve(test_data_transf$Target, pred.tree_model, curve = T))
+plot(pr.curve(test_data_transf$Target, pred.tree_model.over, curve = T))
+plot(pr.curve(test_data_transf$Target, pred.tree_model.under, curve = T))
+plot(pr.curve(test_data_transf$Target, pred.tree_model.both, curve = T))
+plot(pr.curve(test_data_transf$Target, pred.tree_model.synth,, curve = T))
+
+# Test Probabilities/Responses = 0.5
+testProbs.transf <- data.frame(obs = factor(ifelse(test_data_transf$Target == '1', 'Event', 'No Event')),
+                        pred.tree.act = pred.tree_model,
+                        pred.tree.over = pred.tree_model.over,
+                        pred.tree.under = pred.tree_model.under,
+                        pred.tree.both = pred.tree_model.both,
+                        pred.tree.synth = pred.tree_model.synth,
+                        resp.tree.act = factor(ifelse(pred.tree_model >= 0.5, 'Event', 'No Event')),
+                        resp.tree.over = factor(ifelse(pred.tree_model.over >= 0.5, 'Event', 'No Event')),
+                        resp.tree.under = factor(ifelse(pred.tree_model.under >= 0.5, 'Event', 'No Event')),
+                        resp.tree.both = factor(ifelse(pred.tree_model.both >= 0.5, 'Event', 'No Event')),
+                        resp.tree.synth = factor(ifelse(pred.tree_model.synth >= 0.5, 'Event', 'No Event')))
+
+# confusion matrix
+confusionMatrix(data = testProbs.transf$resp.tree.act, reference = testProbs.transf$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.transf$resp.tree.over, reference = testProbs.transf$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.transf$resp.tree.under, reference = testProbs.transf$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.transf$resp.tree.both, reference = testProbs.transf$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.transf$resp.tree.synth, reference = testProbs.transf$obs, mode = "prec_recall")
+
+# calibration plot
+calPlotData <- calibration(obs ~ pred.tree.act + pred.tree.over + pred.tree.under + pred.tree.both + pred.tree.synth, data = testProbs.transf)
+xyplot(calPlotData, auto.key = list(columns = 2))
+
+rm(pred.tree_model, pred.tree_model.over, pred.tree_model.under, pred.tree_model.both, pred.tree_model.synth)
+```
+
+```{r CART - Precision-Recall Curve, eval = F}
+tree_model <- rpart(Target ~., data = select(train_data, -ID, -Fold)) 
+# tree_model.over <- rpart(Target ~., data = train_data.balanced_over)
+# tree_model <- tree_model.over
+pred.tree_model <- predict(tree_model, newdata = test_data)
+# pred.tree_model.over <- predict(tree_model.over, newdata = test_data)
+# pred.tree_model <- pred.tree_model.over
+
+threshold_list <- seq(0, 1, 0.01)[-c(1, 101)]
+threshold_n <- length(threshold_list)
+test_n <- nrow(test_data)
+df <- data.frame(matrix(NA, nrow = test_n, ncol = threshold_n))
+
+pre.rec.df <- data.frame(matrix(NA, nrow = threshold_n, ncol = 3))
+colnames(pre.rec.df) <- c('index', 'precision', 'recall')
+
+
+for (threshold in threshold_list) {
+  Target <- data.frame(Target = factor(ifelse(test_data$Target == '1', 'Event', 'Not Event')))
+  col_num <- threshold*100
+  col <- paste('X', col_num, sep = '')
+  df[col] <- factor(ifelse(pred.tree_model >= threshold, 'Event', 'Not Event'), 
+                    levels = c('Event', 'Not Event'))
+  Prediction <- df[col]
+  colnames(Prediction) <- c('Prediction')
+  
+  cM <- table(Target$Target, Prediction$Prediction)
+  precision <- ifelse((cM[1] + cM[2]) == 0, 0, cM[1] / (cM[1] + cM[2]))
+  recall <- ifelse((cM[1] + cM[3]) == 0, 0, cM[1] / (cM[1] + cM[3]))
+  
+  pre.rec.df$index[col_num] <- col_num 
+  pre.rec.df$precision[col_num] <- precision
+  pre.rec.df$recall[col_num] <- recall
+}
+
+pre.rec.df <- pre.rec.df %>%
+  mutate(fmeasure = (2 * precision * recall)/(precision + recall))
+
+ix = which.max(pre.rec.df$fmeasure)
+pre.rec.df[ix,]
+
+```
+
 
 
 #### Logistic Regression
 
 ```{r Logistics Regression - Sampled Train Data with selected features using LASSO}
 # using sampled train_data + feature selection
-tree_model <- rpart(as.formula(lasso_features_model), 
+logreg_model <- rpart(as.formula(lasso_features_model), 
                     data = select(train_data, -ID, -Fold))   # actual train_data
-tree_model.over <- rpart(as.formula(lasso_features_model), 
+logreg_model.over <- rpart(as.formula(lasso_features_model), 
                          data = train_data.balanced_over)
-tree_model.under <- rpart(as.formula(lasso_features_model), 
+logreg_model.under <- rpart(as.formula(lasso_features_model), 
                           data = train_data.balanced_under)
-tree_model.both <- rpart(as.formula(lasso_features_model), 
+logreg_model.both <- rpart(as.formula(lasso_features_model), 
                          data = train_data.balanced_both)
-tree_model.synth <- rpart(as.formula(lasso_features_model), 
+logreg_model.synth <- rpart(as.formula(lasso_features_model), 
                           data = train_data.balanced_synth)
 
 # make predictions on test data
-pred.tree_model <- predict(tree_model, newdata = test_data)
-pred.tree_model.over <- predict(tree_model.over, newdata = test_data)
-pred.tree_model.under <- predict(tree_model.under, newdata = test_data)
-pred.tree_model.both <- predict(tree_model.both, newdata = test_data)
-pred.tree_model.synth <- predict(tree_model.synth, newdata = test_data)
+pred.logreg_model <- predict(logreg_model, newdata = test_data)
+pred.logreg_model.over <- predict(logreg_model.over, newdata = test_data)
+pred.logreg_model.under <- predict(logreg_model.under, newdata = test_data)
+pred.logreg_model.both <- predict(logreg_model.both, newdata = test_data)
+pred.logreg_model.synth <- predict(logreg_model.synth, newdata = test_data)
 
 # ROC curves
-roc.curve(test_data$Target, pred.tree_model, plotit = F)
-roc.curve(test_data$Target, pred.tree_model.over, plotit = F)
-roc.curve(test_data$Target, pred.tree_model.under, plotit = F)
-roc.curve(test_data$Target, pred.tree_model.both, plotit = F)
-roc.curve(test_data$Target, pred.tree_model.synth, plotit = F)
+ROSE::roc.curve(test_data$Target, pred.logreg_model, plotit = T)
+ROSE::roc.curve(test_data$Target, pred.logreg_model.over, plotit = T)
+ROSE::roc.curve(test_data$Target, pred.logreg_model.under, plotit = T)
+ROSE::roc.curve(test_data$Target, pred.logreg_model.both, plotit = T)
+ROSE::roc.curve(test_data$Target, pred.logreg_model.synth, plotit = T)
 
+# PRROC curves
+plot(pr.curve(test_data$Target, pred.logreg_model, curve = T))
+plot(pr.curve(test_data$Target, pred.logreg_model.over, curve = T))
+plot(pr.curve(test_data$Target, pred.logreg_model.under, curve = T))
+plot(pr.curve(test_data$Target, pred.logreg_model.both, curve = T))
+plot(pr.curve(test_data$Target, pred.logreg_model.synth,, curve = T))
+
+# Test Probabilities/Responses = 0.5
+testProbs.logreg.fs <- data.frame(obs = factor(ifelse(test_data_transf$Target == '1', 'Event', 'No Event')),
+                        pred.logreg.act = pred.logreg_model,
+                        pred.logreg.over = pred.logreg_model.over,
+                        pred.logreg.under = pred.logreg_model.under,
+                        pred.logreg.both = pred.logreg_model.both,
+                        pred.logreg.synth = pred.logreg_model.synth,
+                        resp.logreg.act = factor(ifelse(pred.logreg_model >= 0.5, 'Event', 'No Event')),
+                        resp.logreg.over = factor(ifelse(pred.logreg_model.over >= 0.5, 'Event', 'No Event')),
+                        resp.logreg.under = factor(ifelse(pred.logreg_model.under >= 0.5, 'Event', 'No Event')),
+                        resp.logreg.both = factor(ifelse(pred.logreg_model.both >= 0.5, 'Event', 'No Event')),
+                        resp.logreg.synth = factor(ifelse(pred.logreg_model.synth >= 0.5, 'Event', 'No Event')))
+
+# confusion matrix
+confusionMatrix(data = testProbs.logreg.fs$resp.logreg.act, reference = testProbs.logreg.fs$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.logreg.fs$resp.logreg.over, reference = testProbs.logreg.fs$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.logreg.fs$resp.logreg.under, reference = testProbs.logreg.fs$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.logreg.fs$resp.logreg.both, reference = testProbs.logreg.fs$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.logreg.fs$resp.logreg.synth, reference = testProbs.logreg.fs$obs, mode = "prec_recall")
+
+# calibration plot
+calPlotData <- calibration(obs ~ pred.logreg.act + pred.logreg.over + pred.logreg.under + pred.logreg.both + pred.logreg.synth, data = testProbs.logreg.fs)
+xyplot(calPlotData, auto.key = list(columns = 2))
+
+rm(pred.logreg_model, pred.logreg_model.over, pred.logreg_model.under, pred.logreg_model.both, pred.logreg_model.synth)
 ```
 
 #### Random Forest
 
 ```{r RF - Sampled Train Data}
 ##### Actual Data
-set.seed(1)
-rf_model <- randomForest(Target_fct ~., data = select(train_data_new, -ID, -Fold), ntree = 500)   # actual train_data
-# print(rf_model)
-
 mtry <- tuneRF(select(train_data_new, -ID, -Fold, -Target_fct), 
                train_data_new$Target_fct,
                ntreeTry = 500,
@@ -273,9 +492,9 @@ rf_model <-randomForest(Target_fct ~.,
                   importance = TRUE,
                   ntree = 500)
 
-#Evaluate variable importance
-importance(rf_model)
-varImpPlot(rf_model)
+# #Evaluate variable importance
+# importance(rf_model)
+# varImpPlot(rf_model)
 
 ##### Upsampling 
 train_data.balanced_over <- train_data.balanced_over %>%
@@ -316,7 +535,7 @@ print(best.m.under)
 set.seed(1)
 rf_model.under <-randomForest(Target_fct ~.,
                   data = select(train_data.balanced_under,  -Target), 
-                  mtry = best.m[1], 
+                  mtry = best.m.under[1], 
                   importance = TRUE,
                   ntree = 500)
 
@@ -324,22 +543,22 @@ rf_model.under <-randomForest(Target_fct ~.,
 train_data.balanced_both <- train_data.balanced_both %>%
   mutate(Target_fct = factor(ifelse(Target == '1', 'Event', 'No Event')))
 
-mtry.both <- tuneRF(select(train_data.balanced_both, -Target, -Target_fct),
-               train_data.balanced_both$Target_fct,
-               ntreeTry = 500,
-               stepFactor = 1.5,
-               improve = 0.001,
-               trace = TRUE,
-               plot = TRUE)
-
-best.m.both <- mtry.both[mtry.both[, 2] == min(mtry.both[, 2]), 1]
-print(best.m.both)
+# mtry.both <- tuneRF(select(train_data.balanced_both, -Target, -Target_fct),
+#                train_data.balanced_both$Target_fct,
+#                ntreeTry = 500,
+#                stepFactor = 1.5,
+#                improve = 0.001,
+#                trace = TRUE,
+#                plot = TRUE)
+# 
+# best.m.both <- mtry.both[mtry.both[, 2] == min(mtry.both[, 2]), 1]
+# print(best.m.both)
 
 set.seed(1)
 rf_model.both <-randomForest(Target_fct ~.,
                   data = select(train_data.balanced_both,  -Target), 
-                  mtry = best.m[1], 
-                  importance = TRUE,
+                  #mtry = best.m.both[1], 
+                  #importance = TRUE,
                   ntree = 500)
 
 ##### Synthetic Data
@@ -360,7 +579,7 @@ print(best.m.synth)
 set.seed(1)
 rf_model.synth <-randomForest(Target_fct ~.,
                   data = select(train_data.balanced_synth,  -Target), 
-                  mtry = best.m[1], 
+                  mtry = best.m.synth[1], 
                   importance = TRUE,
                   ntree = 500)
 
@@ -372,12 +591,18 @@ pred.rf_model.both = predict(rf_model.both, newdata = test_data, type = "prob")
 pred.rf_model.synth = predict(rf_model.synth, newdata = test_data, type = "prob")
 
 # ROC curves
-roc.curve(test_data$Target, pred.rf_model[,1], plotit = F)
-roc.curve(test_data$Target, pred.rf_model.over[,1], plotit = F)
-roc.curve(test_data$Target, pred.rf_model.under[,1], plotit = F)
-roc.curve(test_data$Target, pred.rf_model.both[,1], plotit = F)
-roc.curve(test_data$Target, pred.rf_model.synth[,1], plotit = F)
+ROSE::roc.curve(test_data$Target, pred.rf_model[,1], plotit = T)
+ROSE::roc.curve(test_data$Target, pred.rf_model.over[,1], plotit = T)
+ROSE::roc.curve(test_data$Target, pred.rf_model.under[,1], plotit = T)
+ROSE::roc.curve(test_data$Target, pred.rf_model.both[,1], plotit = T)
+ROSE::roc.curve(test_data$Target, pred.rf_model.synth[,1], plotit = T)
 
+# PRROC curves
+plot(pr.curve(test_data$Target, pred.rf_model[,1], curve = T))
+plot(pr.curve(test_data$Target, pred.rf_model.over[,1], curve = T))
+plot(pr.curve(test_data$Target, pred.rf_model.under[,1], curve = T))
+plot(pr.curve(test_data$Target, pred.rf_model.both[,1], curve = T))
+plot(pr.curve(test_data$Target, pred.rf_model.synth[,1], curve = T))
 
 # Test Probabilities/Responses = 0.5
 testProbs.rf <- data.frame(obs = factor(ifelse(test_data$Target == '1', 'Event', 'No Event')),
@@ -407,3 +632,601 @@ rm(mtry, mtry.both, mtry.synth, mtry.under)
 rm(best.m, best.m.both, best.m.synth, best.m.under)
 rm(pred.rf_model, pred.rf_model.over, pred.rf_model.under, pred.rf_model.both, pred.rf_model.synth)
 ```
+
+```{r RF - Sampled Train Data wo Highly Correlated Variables}
+##### Actual Data
+train_data_xredun <- train_data_xredun %>%
+  mutate(Target_fct = factor(ifelse(Target == '1', 'Event', 'No Event')))
+
+# mtry <- tuneRF(select(train_data_xredun, -ID, -Fold, -Target_fct), 
+#                train_data_new$Target_fct,
+#                ntreeTry = 500,
+#                stepFactor = 1.5,
+#                improve = 0.001,
+#                trace = TRUE, 
+#                plot = TRUE)
+# 
+# best.m <- mtry[mtry[, 2] == min(mtry[, 2]), 1]
+# print(best.m)
+
+set.seed(1)
+rf_model.hcv <-randomForest(Target_fct ~.,
+                  data = select(train_data_xredun, -ID, -Fold, -Target), 
+                  #mtry = best.m[1], 
+                  #importance = TRUE,
+                  ntree = 500)
+
+##### Upsampling 
+# mtry.over <- tuneRF(select(train_data.balanced_over[ , !(names(train_data.balanced_over) 
+#                                                        %in% redundant_var)], -Target, -Target_fct), 
+#                train_data.balanced_over$Target_fct,
+#                ntreeTry = 1000,
+#                stepFactor = 1.5,
+#                improve = 0.001,
+#                trace = TRUE,
+#                plot = TRUE)
+# 
+# best.m.over <- mtry.over[mtry.over[, 2] == min(mtry.over[, 2]), 1]
+# print(best.m.over)
+
+set.seed(1)
+rf_model.over.hcv <-randomForest(Target_fct ~.,
+                      data = select(train_data.balanced_over[ , !(names(train_data.balanced_over) 
+                                                                %in% redundant_var)], -Target), 
+                      ntree = 500)
+
+
+##### Downsampling 
+mtry.under <- tuneRF(select(train_data.balanced_under[ , !(names(train_data.balanced_under) 
+                                                                %in% redundant_var)], -Target, -Target_fct),
+               train_data.balanced_under$Target_fct,
+               ntreeTry = 500,
+               stepFactor = 1.5,
+               improve = 0.01,
+               trace = TRUE,
+               plot = TRUE)
+
+best.m.under <- mtry.under[mtry.under[, 2] == min(mtry.under[, 2]), 1]
+print(best.m.under)
+
+set.seed(1)
+rf_model.under.hcv <-randomForest(Target_fct ~.,
+                      data = select(train_data.balanced_under[ , !(names(train_data.balanced_under) 
+                                                                %in% redundant_var)],  -Target), 
+                      mtry = best.m.under[1], 
+                      importance = TRUE,
+                      ntree = 500)
+
+##### Both: Upsampling-Downsampling 
+# mtry.both <- tuneRF(select(train_data.balanced_both[ , !(names(train_data.balanced_both) 
+#                                                                 %in% redundant_var)], -Target, -Target_fct),
+#                train_data.balanced_both$Target_fct,
+#                ntreeTry = 500,
+#                stepFactor = 1.5,
+#                improve = 0.001,
+#                trace = TRUE,
+#                plot = TRUE)
+# 
+# best.m.both <- mtry.both[mtry.both[, 2] == min(mtry.both[, 2]), 1]
+# print(best.m.both)
+
+set.seed(1)
+rf_model.both.hcv <-randomForest(Target_fct ~.,
+                  data = select(train_data.balanced_both[ , !(names(train_data.balanced_both) 
+                                                                %in% redundant_var)],  -Target), 
+                  #mtry = best.m.both[1], 
+                  #importance = TRUE,
+                  ntree = 500)
+
+##### Synthetic Data
+mtry.synth <- tuneRF(select(train_data.balanced_synth[ , !(names(train_data.balanced_synth) 
+                                                                %in% redundant_var)], -Target, -Target_fct),
+               train_data.balanced_synth$Target_fct,
+               ntreeTry = 500,
+               stepFactor = 1.5,
+               improve = 0.01,
+               trace = TRUE,
+               plot = TRUE)
+
+best.m.synth <- mtry.synth[mtry.synth[, 2] == min(mtry.synth[, 2]), 1]
+print(best.m.synth)
+
+set.seed(1)
+rf_model.synth.hcv <-randomForest(Target_fct ~.,
+                      data = select(train_data.balanced_synth[ , !(names(train_data.balanced_synth) 
+                                                                %in% redundant_var)],  -Target), 
+                      mtry = best.m.synth[1], 
+                      importance = TRUE,
+                      ntree = 500)
+
+# prediction
+pred.rf_model = predict(rf_model.hcv, newdata = test_data, type = "prob")
+pred.rf_model.over = predict(rf_model.over.hcv, newdata = test_data, type = "prob")
+pred.rf_model.under = predict(rf_model.under.hcv, newdata = test_data, type = "prob")
+pred.rf_model.both = predict(rf_model.both.hcv, newdata = test_data, type = "prob")
+pred.rf_model.synth = predict(rf_model.synth.hcv, newdata = test_data, type = "prob")
+
+# ROC curves
+ROSE::roc.curve(test_data$Target, pred.rf_model[,1], plotit = T)
+ROSE::roc.curve(test_data$Target, pred.rf_model.over[,1], plotit = T)
+ROSE::roc.curve(test_data$Target, pred.rf_model.under[,1], plotit = T)
+ROSE::roc.curve(test_data$Target, pred.rf_model.both[,1], plotit = T)
+ROSE::roc.curve(test_data$Target, pred.rf_model.synth[,1], plotit = T)
+
+# PRROC curves
+plot(pr.curve(test_data$Target, pred.rf_model[,1], curve = T))
+plot(pr.curve(test_data$Target, pred.rf_model.over[,1], curve = T))
+plot(pr.curve(test_data$Target, pred.rf_model.under[,1], curve = T))
+plot(pr.curve(test_data$Target, pred.rf_model.both[,1], curve = T))
+plot(pr.curve(test_data$Target, pred.rf_model.synth[,1], curve = T))
+
+# Test Probabilities/Responses = 0.5
+testProbs.rf.hcv <- data.frame(obs = factor(ifelse(test_data$Target == '1', 'Event', 'No Event')),
+                           pred.rf.act = pred.rf_model[,1],
+                           pred.rf.over = pred.rf_model.over[,1],
+                           pred.rf.under = pred.rf_model.under[,1],
+                           pred.rf.both = pred.rf_model.both[,1],
+                           pred.rf.synth = pred.rf_model.synth[,1],
+                           resp.rf.act = factor(ifelse(pred.rf_model[,1] >= 0.5, 'Event', 'No Event')),
+                           resp.rf.over = factor(ifelse(pred.rf_model.over[,1] >= 0.5, 'Event', 'No Event')),
+                           resp.rf.under = factor(ifelse(pred.rf_model.under[,1] >= 0.5, 'Event', 'No Event')),
+                           resp.rf.both = factor(ifelse(pred.rf_model.both[,1] >= 0.5, 'Event', 'No Event')),
+                           resp.rf.synth = factor(ifelse(pred.rf_model.synth[,1] >= 0.5, 'Event', 'No Event')))
+
+# confusion matrix
+confusionMatrix(data = testProbs.rf.hcv$resp.rf.act, reference = testProbs.rf.hcv$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.rf.hcv$resp.rf.over, reference = testProbs.rf.hcv$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.rf.hcv$resp.rf.under, reference = testProbs.rf.hcv$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.rf.hcv$resp.rf.both, reference = testProbs.rf.hcv$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.rf.hcv$resp.rf.synth, reference = testProbs.rf.hcv$obs, mode = "prec_recall")
+
+# calibration plot
+calPlotData <- calibration(obs ~ pred.rf.act + pred.rf.over + pred.rf.under + pred.rf.both + pred.rf.synth, data = testProbs.rf.hcv)
+xyplot(calPlotData, auto.key = list(columns = 2))
+
+rm(mtry, mtry.both, mtry.synth, mtry.under)
+rm(best.m, best.m.both, best.m.synth, best.m.under)
+rm(pred.rf_model, pred.rf_model.over, pred.rf_model.under, pred.rf_model.both, pred.rf_model.synth)
+```
+
+```{r RF - Sampled Train Data with selected features using LASSO}
+##### Actual Data
+mtry <- tuneRF(train_data_new[, lasso.final_features], 
+               train_data_new$Target_fct,
+               ntreeTry = 500,
+               stepFactor = 1.5,
+               improve = 0.01,
+               trace = TRUE, 
+               plot = TRUE)
+
+best.m <- mtry[mtry[, 2] == min(mtry[, 2]), 1]
+print(best.m)
+
+set.seed(1)
+rf_model.fs <-randomForest(Target_fct ~.,
+                  data = train_data_new[, c(lasso.final_features, 'Target_fct')], 
+                  mtry = best.m[1], 
+                  importance = TRUE,
+                  ntree = 500)
+
+##### Upsampling 
+# mtry.over <- tuneRF(train_data.balanced_over[, lasso.final_features],
+#                train_data.balanced_over$Target_fct,
+#                ntreeTry = 1000,
+#                stepFactor = 1.5,
+#                improve = 0.001,
+#                trace = TRUE,
+#                plot = TRUE)
+# 
+# best.m.over <- mtry.over[mtry.over[, 2] == min(mtry.over[, 2]), 1]
+# print(best.m.over)
+
+set.seed(1)
+rf_model.over.fs <-randomForest(Target_fct ~.,
+                    data = train_data.balanced_over[, c(lasso.final_features, 'Target_fct')], 
+                    ntree = 500)
+
+
+##### Downsampling 
+mtry.under <- tuneRF(train_data.balanced_under[, lasso.final_features],
+               train_data.balanced_under$Target_fct,
+               ntreeTry = 500,
+               stepFactor = 1.5,
+               improve = 0.01,
+               trace = TRUE,
+               plot = TRUE)
+
+best.m.under <- mtry.under[mtry.under[, 2] == min(mtry.under[, 2]), 1]
+print(best.m.under)
+
+set.seed(1)
+rf_model.under.fs <-randomForest(Target_fct ~.,
+                     data = train_data.balanced_under[, c(lasso.final_features, 'Target_fct')], 
+                     mtry = best.m.under[1], 
+                     importance = TRUE,
+                     ntree = 500)
+
+##### Both: Upsampling-Downsampling 
+mtry.both <- tuneRF(train_data.balanced_both[, lasso.final_features],
+               train_data.balanced_both$Target_fct,
+               ntreeTry = 500,
+               stepFactor = 1.5,
+               improve = 0.001,
+               trace = TRUE,
+               plot = TRUE)
+
+best.m.both <- mtry.both[mtry.both[, 2] == min(mtry.both[, 2]), 1]
+print(best.m.both)
+
+set.seed(1)
+rf_model.both.fs <-randomForest(Target_fct ~.,
+                     data = train_data.balanced_both[, c(lasso.final_features, 'Target_fct')], 
+                     mtry = best.m.both[1], 
+                     importance = TRUE,
+                     ntree = 500)
+
+##### Synthetic Data
+mtry.synth <- tuneRF(train_data.balanced_synth[, lasso.final_features],
+               train_data.balanced_synth$Target_fct,
+               ntreeTry = 500,
+               stepFactor = 1.5,
+               improve = 0.01,
+               trace = TRUE,
+               plot = TRUE)
+
+best.m.synth <- mtry.synth[mtry.synth[, 2] == min(mtry.synth[, 2]), 1]
+print(best.m.synth)
+
+set.seed(1)
+rf_model.synth.fs <-randomForest(Target_fct ~.,
+                     data = train_data.balanced_synth[, c(lasso.final_features, 'Target_fct')], 
+                     mtry = best.m.synth[1], 
+                     importance = TRUE,
+                     ntree = 500)
+
+# prediction
+pred.rf_model = predict(rf_model.fs, newdata = test_data, type = "prob")
+pred.rf_model.over = predict(rf_model.over.fs, newdata = test_data, type = "prob")
+pred.rf_model.under = predict(rf_model.under.fs, newdata = test_data, type = "prob")
+pred.rf_model.both = predict(rf_model.both.fs, newdata = test_data, type = "prob")
+pred.rf_model.synth = predict(rf_model.synth.fs, newdata = test_data, type = "prob")
+
+# ROC curves
+ROSE::roc.curve(test_data$Target, pred.rf_model[,1], plotit = T)
+ROSE::roc.curve(test_data$Target, pred.rf_model.over[,1], plotit = T)
+ROSE::roc.curve(test_data$Target, pred.rf_model.under[,1], plotit = T)
+ROSE::roc.curve(test_data$Target, pred.rf_model.both[,1], plotit = T)
+ROSE::roc.curve(test_data$Target, pred.rf_model.synth[,1], plotit = T)
+
+# PRROC curves
+plot(pr.curve(test_data$Target, pred.rf_model[,1], curve = T))
+plot(pr.curve(test_data$Target, pred.rf_model.over[,1], curve = T))
+plot(pr.curve(test_data$Target, pred.rf_model.under[,1], curve = T))
+plot(pr.curve(test_data$Target, pred.rf_model.both[,1], curve = T))
+plot(pr.curve(test_data$Target, pred.rf_model.synth[,1], curve = T))
+
+# Test Probabilities/Responses = 0.5
+testProbs.rf.fs <- data.frame(obs = factor(ifelse(test_data$Target == '1', 'Event', 'No Event')),
+                           pred.rf.act = pred.rf_model[,1],
+                           pred.rf.over = pred.rf_model.over[,1],
+                           pred.rf.under = pred.rf_model.under[,1],
+                           pred.rf.both = pred.rf_model.both[,1],
+                           pred.rf.synth = pred.rf_model.synth[,1],
+                           resp.rf.act = factor(ifelse(pred.rf_model[,1] >= 0.5, 'Event', 'No Event')),
+                           resp.rf.over = factor(ifelse(pred.rf_model.over[,1] >= 0.5, 'Event', 'No Event')),
+                           resp.rf.under = factor(ifelse(pred.rf_model.under[,1] >= 0.5, 'Event', 'No Event')),
+                           resp.rf.both = factor(ifelse(pred.rf_model.both[,1] >= 0.5, 'Event', 'No Event')),
+                           resp.rf.synth = factor(ifelse(pred.rf_model.synth[,1] >= 0.5, 'Event', 'No Event')))
+
+# confusion matrix
+confusionMatrix(data = testProbs.rf.fs$resp.rf.act, reference = testProbs.rf.fs$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.rf.fs$resp.rf.over, reference = testProbs.rf.fs$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.rf.fs$resp.rf.under, reference = testProbs.rf.fs$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.rf.fs$resp.rf.both, reference = testProbs.rf.fs$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.rf.fs$resp.rf.synth, reference = testProbs.rf.fs$obs, mode = "prec_recall")
+
+# calibration plot
+calPlotData <- calibration(obs ~ pred.rf.act + pred.rf.over + pred.rf.under + pred.rf.both + pred.rf.synth, data = testProbs.rf.fs)
+xyplot(calPlotData, auto.key = list(columns = 2))
+
+rm(mtry, mtry.both, mtry.synth, mtry.under)
+rm(best.m, best.m.both, best.m.synth, best.m.under)
+rm(pred.rf_model, pred.rf_model.over, pred.rf_model.under, pred.rf_model.both, pred.rf_model.synth)
+```
+
+```{r RF - Sampled Train Data with Transformed fields}
+##### Actual Data
+mtry <- tuneRF(select(train_data_transf, -ID, -Fold, -Target_fct, -Target), 
+               train_data_transf$Target_fct,
+               ntreeTry = 500,
+               stepFactor = 1.5,
+               improve = 0.01,
+               trace = TRUE, 
+               plot = TRUE)
+
+best.m <- mtry[mtry[, 2] == min(mtry[, 2]), 1]
+print(best.m)
+
+set.seed(1)
+rf_model.transf <-randomForest(Target_fct ~.,
+                       data = select(train_data_transf, -ID, -Fold, -Target), 
+                       mtry = best.m[1], 
+                       importance = TRUE,
+                       ntree = 500)
+
+##### Upsampling 
+# mtry.over <- tuneRF(select(train_data_transf.balanced_over, -Target, -Target_fct),
+#                train_data_transf.balanced_over$Target_fct,
+#                ntreeTry = 1000,
+#                stepFactor = 1.5,
+#                improve = 0.001,
+#                trace = TRUE,
+#                plot = TRUE)
+# 
+# best.m.over <- mtry.over[mtry.over[, 2] == min(mtry.over[, 2]), 1]
+# print(best.m.over)
+
+set.seed(1)
+rf_model.over.transf <-randomForest(Target_fct ~.,
+                         data = select(train_data_transf.balanced_over, -Target), 
+                         ntree = 500)
+
+
+##### Downsampling 
+mtry.under <- tuneRF(select(train_data_transf.balanced_under, -Target, -Target_fct),
+               train_data_transf.balanced_under$Target_fct,
+               ntreeTry = 500,
+               stepFactor = 1.5,
+               improve = 0.01,
+               trace = TRUE,
+               plot = TRUE)
+
+best.m.under <- mtry.under[mtry.under[, 2] == min(mtry.under[, 2]), 1]
+print(best.m.under)
+
+set.seed(1)
+rf_model.under.transf <-randomForest(Target_fct ~.,
+                        data = select(train_data_transf.balanced_under,  -Target), 
+                        mtry = best.m.under[1], 
+                        importance = TRUE,
+                        ntree = 500)
+
+##### Both: Upsampling-Downsampling 
+# mtry.both <- tuneRF(select(train_data_transf.balanced_both, -Target, -Target_fct),
+#                train_data_transf.balanced_both$Target_fct,
+#                ntreeTry = 500,
+#                stepFactor = 1.5,
+#                improve = 0.001,
+#                trace = TRUE,
+#                plot = TRUE)
+# 
+# best.m.both <- mtry.both[mtry.both[, 2] == min(mtry.both[, 2]), 1]
+# print(best.m.both)
+
+set.seed(1)
+rf_model.both.transf <-randomForest(Target_fct ~.,
+                  data = select(train_data_transf.balanced_both,  -Target), 
+                  #mtry = best.m.both[1], 
+                  #importance = TRUE,
+                  ntree = 500)
+
+##### Synthetic Data
+mtry.synth <- tuneRF(select(train_data_transf.balanced_synth, -Target, -Target_fct),
+               train_data_transf.balanced_synth$Target_fct,
+               ntreeTry = 500,
+               stepFactor = 1.5,
+               improve = 0.01,
+               trace = TRUE,
+               plot = TRUE)
+
+best.m.synth <- mtry.synth[mtry.synth[, 2] == min(mtry.synth[, 2]), 1]
+print(best.m.synth)
+
+set.seed(1)
+rf_model.synth.transf <-randomForest(Target_fct ~.,
+                         data = select(train_data_transf.balanced_synth,  -Target), 
+                         mtry = best.m.synth[1], 
+                         importance = TRUE,
+                         ntree = 500)
+
+# prediction
+pred.rf_model = predict(rf_model.transf, newdata = test_data_transf, type = "prob")
+pred.rf_model.over = predict(rf_model.over.transf, newdata = test_data_transf, type = "prob")
+pred.rf_model.under = predict(rf_model.under.transf, newdata = test_data_transf, type = "prob")
+pred.rf_model.both = predict(rf_model.both.transf, newdata = test_data_transf, type = "prob")
+pred.rf_model.synth = predict(rf_model.synth.transf, newdata = test_data_transf, type = "prob")
+
+# ROC curves
+ROSE::roc.curve(test_data$Target, pred.rf_model[,1], plotit = T)
+ROSE::roc.curve(test_data$Target, pred.rf_model.over[,1], plotit = T)
+ROSE::roc.curve(test_data$Target, pred.rf_model.under[,1], plotit = T)
+ROSE::roc.curve(test_data$Target, pred.rf_model.both[,1], plotit = T)
+ROSE::roc.curve(test_data$Target, pred.rf_model.synth[,1], plotit = T)
+
+# PRROC curves
+plot(pr.curve(test_data$Target, pred.rf_model[,1], curve = T))
+plot(pr.curve(test_data$Target, pred.rf_model.over[,1], curve = T))
+plot(pr.curve(test_data$Target, pred.rf_model.under[,1], curve = T))
+plot(pr.curve(test_data$Target, pred.rf_model.both[,1], curve = T))
+plot(pr.curve(test_data$Target, pred.rf_model.synth[,1], curve = T))
+
+# Test Probabilities/Responses = 0.5
+testProbs.rf.transf <- data.frame(obs = factor(ifelse(test_data_transf$Target == '1', 'Event', 'No Event')),
+                           pred.rf.act = pred.rf_model[,1],
+                           pred.rf.over = pred.rf_model.over[,1],
+                           pred.rf.under = pred.rf_model.under[,1],
+                           pred.rf.both = pred.rf_model.both[,1],
+                           pred.rf.synth = pred.rf_model.synth[,1],
+                           resp.rf.act = factor(ifelse(pred.rf_model[,1] >= 0.5, 'Event', 'No Event')),
+                           resp.rf.over = factor(ifelse(pred.rf_model.over[,1] >= 0.5, 'Event', 'No Event')),
+                           resp.rf.under = factor(ifelse(pred.rf_model.under[,1] >= 0.5, 'Event', 'No Event')),
+                           resp.rf.both = factor(ifelse(pred.rf_model.both[,1] >= 0.5, 'Event', 'No Event')),
+                           resp.rf.synth = factor(ifelse(pred.rf_model.synth[,1] >= 0.5, 'Event', 'No Event')))
+
+# confusion matrix
+confusionMatrix(data = testProbs.rf.transf$resp.rf.act, reference = testProbs.rf.transf$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.rf.transf$resp.rf.over, reference = testProbs.rf.transf$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.rf.transf$resp.rf.under, reference = testProbs.rf.transf$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.rf.transf$resp.rf.both, reference = testProbs.rf.transf$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.rf.transf$resp.rf.synth, reference = testProbs.rf.transf$obs, mode = "prec_recall")
+
+# calibration plot
+calPlotData <- calibration(obs ~ pred.rf.act + pred.rf.over + pred.rf.under + pred.rf.both + pred.rf.synth, data = testProbs.rf.transf)
+xyplot(calPlotData, auto.key = list(columns = 2))
+
+rm(mtry, mtry.both, mtry.synth, mtry.under)
+rm(best.m, best.m.both, best.m.synth, best.m.under)
+rm(pred.rf_model, pred.rf_model.over, pred.rf_model.under, pred.rf_model.both, pred.rf_model.synth)
+```
+
+#### Output Consolidation
+
+```{r predicted probabilities}
+# Collect and Extract the probabilities obtained from classification trees models, 
+# logistic regression, and random forests
+
+# Decision Tree
+
+tree.act <- select(testProbs, obs, pred.tree.act, pred.tree.over, 
+                   pred.tree.under, pred.tree.both, pred.tree.synth)
+colnames(tree.act) <- c('obs', 'act', 'over', 'under', 'both', 'synth')
+
+tree.hcv <- select(testProbs.hcv, obs, pred.tree.act, pred.tree.over, 
+                   pred.tree.under, pred.tree.both, pred.tree.synth)
+colnames(tree.hcv) <- c('obs', 'act', 'over', 'under', 'both', 'synth')
+
+tree.fs <- select(testProbs.fs, obs, pred.tree.act, pred.tree.over, 
+                  pred.tree.under, pred.tree.both, pred.tree.synth)
+colnames(tree.fs) <- c('obs', 'act', 'over', 'under', 'both', 'synth')
+
+tree.transf <- select(testProbs.transf, obs, pred.tree.act, pred.tree.over, 
+                      pred.tree.under, pred.tree.both, pred.tree.synth)
+colnames(tree.transf) <- c('obs', 'act', 'over', 'under', 'both', 'synth')
+
+# Logistic Regression
+logreg.fs <- select(testProbs.logreg.fs, obs, pred.logreg.act, pred.logreg.over, 
+                    pred.logreg.under, pred.logreg.both, pred.logreg.synth)
+colnames(logreg.fs) <- c('obs', 'act', 'over', 'under', 'both', 'synth')
+
+# Random Forest
+randf.act <- select(testProbs.rf, obs, pred.rf.act, pred.rf.over, 
+                 pred.rf.under, pred.rf.both, pred.rf.synth)
+colnames(randf.act) <- c('obs', 'act', 'over', 'under', 'both', 'synth')
+
+randf.hcv <- select(testProbs.rf.hcv, obs, pred.rf.act, pred.rf.over, 
+                 pred.rf.under, pred.rf.both, pred.rf.synth)
+colnames(randf.hcv) <- c('obs', 'act', 'over', 'under', 'both', 'synth')
+
+randf.fs <- select(testProbs.rf.fs, obs, pred.rf.act, pred.rf.over, 
+                pred.rf.under, pred.rf.both, pred.rf.synth)
+colnames(randf.fs ) <- c('obs', 'act', 'over', 'under', 'both', 'synth')
+
+randf.transf <- select(testProbs.rf.transf, obs, pred.rf.act, pred.rf.over, 
+                    pred.rf.under, pred.rf.both, pred.rf.synth)
+colnames(randf.transf) <- c('obs', 'act', 'over', 'under', 'both', 'synth')
+```
+
+```{r precision-recall curve - calibration of probability threshold}
+# The calibration_thresh function extracts the probability threshold that produces the best
+# fmeasure, precision, and recall for each algorithm used.
+# Input: data - data frame of predicted probabilities and the actual target value
+#        algo - determines and tracks the algorithm used which made the prediction probabilities
+# Output: dataframe of precision, recall and fmeasure, and probability threshold
+
+calibration_thresh <- function(data, algo_ = NA) {
+  # create sequence of threshold to use
+  threshold_list <- seq(0, 1, 0.01)[-c(1, 101)]
+  threshold_n <- length(threshold_list)
+  
+  test_n <- nrow(data)
+  # create temporary table which stores the transformed probabilities (into responses)
+  df <- data.frame(matrix(NA, nrow = test_n, ncol = threshold_n))
+  
+  # create table which stores the precision, recall, and fmeasure for each probability threshold
+  pre.rec.df <- data.frame(matrix(NA, nrow = threshold_n, ncol = 4))
+  colnames(pre.rec.df) <- c('index', 'precision', 'recall', 'model')
+  
+  
+  for (field in colnames(data)[-1]) {
+      for (threshold in threshold_list) {
+          # Actual Target Value
+          Target <- data.frame(Target = factor(ifelse(data$obs == 'Event', 'Event', 'Not Event')))
+          
+          col_num <- threshold*100
+          col <- paste('X', col_num, sep = '')
+          
+          # Transformed predicted probabilities derived from the defined threshold
+          df[col] <- factor(ifelse(data[field] >= threshold, 'Event', 'Not Event'),
+                            levels = c('Event', 'Not Event'))
+          Prediction <- df[col]
+          colnames(Prediction) <- c('Prediction')
+          
+          # build confusion matrix
+          cM <- table(Target$Target, Prediction$Prediction)
+          
+          # determine the value of precision and recall
+          precision <- ifelse((cM[1] + cM[2]) == 0, 0, cM[1] / (cM[1] + cM[2]))
+          recall <- ifelse((cM[1] + cM[3]) == 0, 0, cM[1] / (cM[1] + cM[3]))
+          
+          # store the each of the values to appropriate columns
+          pre.rec.df$index[col_num] <- col_num
+          pre.rec.df$precision[col_num] <- precision
+          pre.rec.df$recall[col_num] <- recall
+          pre.rec.df$model[col_num] <- field
+          }
+     
+      # compute fmeasure
+      pre.rec.df <- pre.rec.df %>%
+        mutate(fmeasure = (2 * precision * recall)/(precision + recall))
+      
+      # identify the index which proces the best fmeasure
+      ix = which.max(pre.rec.df$fmeasure)
+      
+      # store the data of the index to best_thresh
+      # also store precision, recall, and fmeasure for probability threshold = 0.5 as baseline
+      if (field == 'act') {
+        best_thresh <- rbind(pre.rec.df[50,], pre.rec.df[ix,])
+      }
+      else {
+        best_thresh <- rbind(best_thresh, pre.rec.df[50,], pre.rec.df[ix,])
+      }
+  }
+  
+  # process and tidy the final table
+  best_thresh <- unique(best_thresh)
+  best_thresh <- best_thresh %>%
+    mutate(prob_thresh = best_thresh$index/100,
+           algorithm = algo_) %>%
+    select(algorithm, prob_thresh, model, precision, recall, fmeasure)
+  
+  
+  return(best_thresh)
+}
+  
+
+# run calibration_thresh function across all approaches done
+dt.act <- calibration_thresh(tree.act, 'classification tree')
+dt.hcv <- calibration_thresh(tree.hcv, 'classification tree')
+dt.fs <- calibration_thresh(tree.fs, 'classification tree')
+dt.transf <- calibration_thresh(tree.transf, 'classification tree')
+
+lg.fs <- calibration_thresh(logreg.fs, 'logistic regression')
+
+rf.act <- calibration_thresh(randf.act, 'random forest')
+rf.hcv <- calibration_thresh(randf.hcv, 'random forest')
+rf.fs <- calibration_thresh(randf.fs, 'random forest')
+rf.transf <- calibration_thresh(randf.transf, 'random forest')
+
+# consolidate all the results
+performance <- rbind(dt.act, dt.hcv, dt.fs, dt.transf,
+                     lg.fs,
+                     rf.act, rf.hcv, rf.fs, rf.transf)
+
+# deterime the model and porobabily threshold that produced the best precision, recall and fmeasure
+prec.ix = which.max(performance$precision)
+rec.ix = which.max(performance$recall)
+fmeas.ix = which.max(performance$fmeasure)
+
+unique(performance[c(prec.ix, rec.ix, fmeas.ix),])
+```
+
