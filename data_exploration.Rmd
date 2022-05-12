@@ -36,3 +36,8 @@ mtx_corr <- reshape2::acast(corr, Var1~Var2, value.var="Freq")
 #plot correlations visually
 corrplot(mtx_corr, is.corr=FALSE, tl.col="black", na.label=" ")
 ```
+
+```{r box plots of numeric fields}
+boxplot(train_data[, numeric_cols])
+```
+
