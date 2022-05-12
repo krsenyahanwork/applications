@@ -15,6 +15,18 @@ data_dict <- read.csv("~/Downloads/applications/savii/data/data_dictionary.csv",
 data_sample <- data_sample %>%
   select(-X)
 
+## data exclusion and update some values
+## Variables Var29, Var30, Var116 all consists factor levels 0, 1, 2, 5, 10, 20.
+## I decided to update levels that are 2-digits to 1 digit so that it would be easier for 
+## doing the feature selection. Decided to replace 10 with 8, and 20 with 9.
+data_sample <- data_sample %>%
+  mutate(Var29 = ifelse(Var29 == '10', '8',
+                   ifelse(Var29 == '20', '9', Var29)),
+         Var30 = ifelse(Var30 == '10', '8',
+                   ifelse(Var30 == '20', '9', Var30)),
+         Var116 = ifelse(Var116 == '10', '8',
+                    ifelse(Var116 == '20', '9', Var116)))  # update values to only 1-digit
+
 ################################################################################
 # Data type conversion
 # Charcter Types: member identifier and categorically nominal fields
@@ -40,7 +52,16 @@ data_sample <- data_sample %>%
 
 # additional data transformation 
 # this resolves issues that happen during building prediction and prediction models
+data_sample <- data_sample %>%
+  select(-Var12)               # Var12 consists of only 1 value; all 0s - not helpful for building model
 
+
+
+numeric_cols <- unlist(lapply(train_data, is.numeric))
+numeric_cols <- colnames(train_data[, numeric_cols])
+
+integer_cols <- unlist(lapply(train_data, is.integer))
+integer_cols <- colnames(train_data[, integer_cols])
 ################################################################################
 # Split train and test data sets
 train_data <- data_sample %>% 
@@ -48,19 +69,13 @@ train_data <- data_sample %>%
 test_data <- data_sample %>% 
   filter(Fold == 'OS')                           # final test set
 
-################################################################################
-# # Create validation set out from training set with 80/20 split
-# # The random sampling is done in each class and preserved the class 
-# # distribution of the data
-# set.seed(145)
-# trainIndex <- createDataPartition(train_data$Target, p = .8, 
-#                                   list = FALSE, 
-#                                   times = 1)
-# train_sample <- train_data[trainIndex,]          # training data for building model/s
-# validation_sample  <- train_data[-trainIndex,]   # test data for building model/s
-
+# Additional copy of train_data for randomForest
+train_data_new <- train_data %>%
+  mutate(Target_fct = factor(ifelse(Target == '1', 'Event', 'No Event'))) %>%
+  select(-Target)
 
 ################################################################################
+
 # removing highly correlated variables 
 train_data_dup <- train_data %>%
   select(-ID, -Fold, -Target)
