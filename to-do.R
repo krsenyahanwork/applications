@@ -21,8 +21,12 @@ ways to deal with imbalanced dataset
   - SMOTE
   - cost sensitive learning (CSL)
 
-methods t try first 
+methods to try first 
   - decision tree
-  - randome forest
+  - random forest
   - logistic regression
   - neural networks
+
+data transformation
+  - numeric t log transformed
+  - outliers in numeric data
