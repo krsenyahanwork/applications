@@ -55,27 +55,44 @@ data_sample <- data_sample %>%
 data_sample <- data_sample %>%
   select(-Var12)               # Var12 consists of only 1 value; all 0s - not helpful for building model
 
+# Numeric fields that may contain outliers
+# Columns that are highly skewed will be transformed (i.e., logarithmic)
+numeric_cols <- unlist(lapply(data_sample, is.numeric))
+numeric_cols <- colnames(data_sample[, numeric_cols])
 
+integer_cols <- unlist(lapply(data_sample, is.integer))
+integer_cols <- colnames(data_sample[, integer_cols])
 
-numeric_cols <- unlist(lapply(train_data, is.numeric))
-numeric_cols <- colnames(train_data[, numeric_cols])
+numeric_cols <- numeric_cols[!numeric_cols %in% integer_cols]
+# see boxplots in data_exploration.Rmd
 
-integer_cols <- unlist(lapply(train_data, is.integer))
-integer_cols <- colnames(train_data[, integer_cols])
-################################################################################
+# Log transformation of some numeric fields
+# the listed fields have skewed distribution after visual inspection, through the boxplots
+transform_cols <- c('Var7', 'Var24', 'Var25', 'Var83', 'Var161')
+data_sample_transf <- data_sample
+data_sample_transf[transform_cols] <- log(data_sample_transf[transform_cols]+1)
+
+######################################
 # Split train and test data sets
 train_data <- data_sample %>% 
   filter(Fold == 'IS')
 test_data <- data_sample %>% 
   filter(Fold == 'OS')                           # final test set
 
-# Additional copy of train_data for randomForest
+# Duplicated train-test tables containing transformed variables
+train_data_transf <- data_sample_transf %>% 
+  filter(Fold == 'IS') %>%
+  mutate(Target_fct = factor(ifelse(Target == '1', 'Event', 'No Event')))
+
+test_data_transf <- data_sample_transf %>% 
+  filter(Fold == 'OS')
+
+# Additional copy of train_data for randomForest with Target as factor
 train_data_new <- train_data %>%
   mutate(Target_fct = factor(ifelse(Target == '1', 'Event', 'No Event'))) %>%
   select(-Target)
 
 ################################################################################
-
 # removing highly correlated variables 
 train_data_dup <- train_data %>%
   select(-ID, -Fold, -Target)
@@ -124,3 +141,4 @@ rm(var_to_char, var_to_fct, dum_to_fct)
 # rm(trainIndex)
 rm(data_dict)
 rm(train_data_dup)
+rm(numeric_cols, integer_cols, transform_cols)
