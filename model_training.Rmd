@@ -236,7 +236,7 @@ confusionMatrix(data = testProbs.hcv$resp.tree.act, reference = testProbs.hcv$ob
 confusionMatrix(data = testProbs.hcv$resp.tree.over, reference = testProbs.hcv$obs, mode = "prec_recall")
 confusionMatrix(data = testProbs.hcv$resp.tree.under, reference = testProbs.hcv$obs, mode = "prec_recall")
 confusionMatrix(data = testProbs.hcv$resp.tree.both, reference = testProbs.hcv$obs, mode = "prec_recall")
-confusionMatrix(data = testProbs.hcv$resp.tree.synth, reference = testProbs.hcv$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.hcv$resp.tree.synth, reference = testProbs.hcv$obs)
 
 # calibration plot
 calPlotData <- calibration(obs ~ pred.tree.act + pred.tree.over + pred.tree.under + pred.tree.both + pred.tree.synth, data = testProbs.hcv)
@@ -297,7 +297,7 @@ confusionMatrix(data = testProbs.fs$resp.tree.act, reference = testProbs.fs$obs,
 confusionMatrix(data = testProbs.fs$resp.tree.over, reference = testProbs.fs$obs, mode = "prec_recall")
 confusionMatrix(data = testProbs.fs$resp.tree.under, reference = testProbs.fs$obs, mode = "prec_recall")
 confusionMatrix(data = testProbs.fs$resp.tree.both, reference = testProbs.fs$obs, mode = "prec_recall")
-confusionMatrix(data = testProbs.fs$resp.tree.synth, reference = testProbs.fs$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.fs$resp.tree.synth, reference = testProbs.fs$obs)
 
 # calibration plot
 calPlotData <- calibration(obs ~ pred.tree.act + pred.tree.over + pred.tree.under + pred.tree.both + pred.tree.synth, data = testProbs.fs)
@@ -461,7 +461,7 @@ confusionMatrix(data = testProbs.logreg.fs$resp.logreg.act, reference = testProb
 confusionMatrix(data = testProbs.logreg.fs$resp.logreg.over, reference = testProbs.logreg.fs$obs, mode = "prec_recall")
 confusionMatrix(data = testProbs.logreg.fs$resp.logreg.under, reference = testProbs.logreg.fs$obs, mode = "prec_recall")
 confusionMatrix(data = testProbs.logreg.fs$resp.logreg.both, reference = testProbs.logreg.fs$obs, mode = "prec_recall")
-confusionMatrix(data = testProbs.logreg.fs$resp.logreg.synth, reference = testProbs.logreg.fs$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.logreg.fs$resp.logreg.synth, reference = testProbs.logreg.fs$obs)
 
 # calibration plot
 calPlotData <- calibration(obs ~ pred.logreg.act + pred.logreg.over + pred.logreg.under + pred.logreg.both + pred.logreg.synth, data = testProbs.logreg.fs)
@@ -500,12 +500,12 @@ rf_model <-randomForest(Target_fct ~.,
 train_data.balanced_over <- train_data.balanced_over %>%
   mutate(Target_fct = factor(ifelse(Target == '1', 'Event', 'No Event')))
 
-# mtry.over <- tuneRF(select(train_data.balanced_over, -Target, -Target_fct), 
+# mtry.over <- tuneRF(select(train_data.balanced_over, -Target, -Target_fct),
 #                train_data.balanced_over$Target_fct,
 #                ntreeTry = 1000,
 #                stepFactor = 1.5,
 #                improve = 0.001,
-#                trace = TRUE, 
+#                trace = TRUE,
 #                plot = TRUE)
 # 
 # best.m.over <- mtry.over[mtry.over[, 2] == min(mtry.over[, 2]), 1]
@@ -514,6 +514,8 @@ train_data.balanced_over <- train_data.balanced_over %>%
 set.seed(1)
 rf_model.over <-randomForest(Target_fct ~.,
                   data = select(train_data.balanced_over, -Target), 
+                  #mtry = best.m.over[1], 
+                  #importance = TRUE,
                   ntree = 500)
 
 
@@ -622,7 +624,7 @@ confusionMatrix(data = testProbs.rf$resp.rf.act, reference = testProbs.rf$obs, m
 confusionMatrix(data = testProbs.rf$resp.rf.over, reference = testProbs.rf$obs, mode = "prec_recall")
 confusionMatrix(data = testProbs.rf$resp.rf.under, reference = testProbs.rf$obs, mode = "prec_recall")
 confusionMatrix(data = testProbs.rf$resp.rf.both, reference = testProbs.rf$obs, mode = "prec_recall")
-confusionMatrix(data = testProbs.rf$resp.rf.synth, reference = testProbs.rf$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.rf$resp.rf.synth, reference = testProbs.rf$obs)
 
 # calibration plot
 calPlotData <- calibration(obs ~ pred.rf.act + pred.rf.over + pred.rf.under + pred.rf.both + pred.rf.synth, data = testProbs.rf)
@@ -778,7 +780,7 @@ confusionMatrix(data = testProbs.rf.hcv$resp.rf.act, reference = testProbs.rf.hc
 confusionMatrix(data = testProbs.rf.hcv$resp.rf.over, reference = testProbs.rf.hcv$obs, mode = "prec_recall")
 confusionMatrix(data = testProbs.rf.hcv$resp.rf.under, reference = testProbs.rf.hcv$obs, mode = "prec_recall")
 confusionMatrix(data = testProbs.rf.hcv$resp.rf.both, reference = testProbs.rf.hcv$obs, mode = "prec_recall")
-confusionMatrix(data = testProbs.rf.hcv$resp.rf.synth, reference = testProbs.rf.hcv$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.rf.hcv$resp.rf.synth, reference = testProbs.rf.hcv$obs)
 
 # calibration plot
 calPlotData <- calibration(obs ~ pred.rf.act + pred.rf.over + pred.rf.under + pred.rf.both + pred.rf.synth, data = testProbs.rf.hcv)
@@ -1068,7 +1070,7 @@ confusionMatrix(data = testProbs.rf.transf$resp.rf.act, reference = testProbs.rf
 confusionMatrix(data = testProbs.rf.transf$resp.rf.over, reference = testProbs.rf.transf$obs, mode = "prec_recall")
 confusionMatrix(data = testProbs.rf.transf$resp.rf.under, reference = testProbs.rf.transf$obs, mode = "prec_recall")
 confusionMatrix(data = testProbs.rf.transf$resp.rf.both, reference = testProbs.rf.transf$obs, mode = "prec_recall")
-confusionMatrix(data = testProbs.rf.transf$resp.rf.synth, reference = testProbs.rf.transf$obs, mode = "prec_recall")
+confusionMatrix(data = testProbs.rf.transf$resp.rf.synth, reference = testProbs.rf.transf$obs)
 
 # calibration plot
 calPlotData <- calibration(obs ~ pred.rf.act + pred.rf.over + pred.rf.under + pred.rf.both + pred.rf.synth, data = testProbs.rf.transf)
@@ -1126,6 +1128,8 @@ randf.transf <- select(testProbs.rf.transf, obs, pred.rf.act, pred.rf.over,
 colnames(randf.transf) <- c('obs', 'act', 'over', 'under', 'both', 'synth')
 ```
 
+#### Calibration of Probability Threshold
+
 ```{r precision-recall curve - calibration of probability threshold}
 # The calibration_thresh function extracts the probability threshold that produces the best
 # fmeasure, precision, and recall for each algorithm used.
@@ -1133,7 +1137,7 @@ colnames(randf.transf) <- c('obs', 'act', 'over', 'under', 'both', 'synth')
 #        algo - determines and tracks the algorithm used which made the prediction probabilities
 # Output: dataframe of precision, recall and fmeasure, and probability threshold
 
-calibration_thresh <- function(data, algo_ = NA) {
+calibration_thresh <- function(data, algo_ = NA, approach_ = NA) {
   # create sequence of threshold to use
   threshold_list <- seq(0, 1, 0.01)[-c(1, 101)]
   threshold_n <- length(threshold_list)
@@ -1196,8 +1200,9 @@ calibration_thresh <- function(data, algo_ = NA) {
   best_thresh <- unique(best_thresh)
   best_thresh <- best_thresh %>%
     mutate(prob_thresh = best_thresh$index/100,
-           algorithm = algo_) %>%
-    select(algorithm, prob_thresh, model, precision, recall, fmeasure)
+           algorithm = algo_,
+           approach = approach_) %>%
+    select(algorithm, prob_thresh, model, approach, precision, recall, fmeasure)
   
   
   return(best_thresh)
@@ -1205,17 +1210,17 @@ calibration_thresh <- function(data, algo_ = NA) {
   
 
 # run calibration_thresh function across all approaches done
-dt.act <- calibration_thresh(tree.act, 'classification tree')
-dt.hcv <- calibration_thresh(tree.hcv, 'classification tree')
-dt.fs <- calibration_thresh(tree.fs, 'classification tree')
-dt.transf <- calibration_thresh(tree.transf, 'classification tree')
+dt.act <- calibration_thresh(tree.act, 'classification tree', 'act')
+dt.hcv <- calibration_thresh(tree.hcv, 'classification tree', 'hcv')
+dt.fs <- calibration_thresh(tree.fs, 'classification tree', 'fs')
+dt.transf <- calibration_thresh(tree.transf, 'classification tree', 'transf')
 
-lg.fs <- calibration_thresh(logreg.fs, 'logistic regression')
+lg.fs <- calibration_thresh(logreg.fs, 'logistic regression', 'fs')
 
-rf.act <- calibration_thresh(randf.act, 'random forest')
-rf.hcv <- calibration_thresh(randf.hcv, 'random forest')
-rf.fs <- calibration_thresh(randf.fs, 'random forest')
-rf.transf <- calibration_thresh(randf.transf, 'random forest')
+rf.act <- calibration_thresh(randf.act, 'random forest', 'act')
+rf.hcv <- calibration_thresh(randf.hcv, 'random forest', 'hcv')
+rf.fs <- calibration_thresh(randf.fs, 'random forest', 'fs')
+rf.transf <- calibration_thresh(randf.transf, 'random forest', 'transf')
 
 # consolidate all the results
 performance <- rbind(dt.act, dt.hcv, dt.fs, dt.transf,
