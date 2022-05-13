@@ -1081,6 +1081,24 @@ rm(best.m, best.m.both, best.m.synth, best.m.under)
 rm(pred.rf_model, pred.rf_model.over, pred.rf_model.under, pred.rf_model.both, pred.rf_model.synth)
 ```
 
+#### Data and Predictions
+```{r prediction for train and test}
+pred.bestmodel.train = predict(rf_model.under.transf, newdata = train_data_transf, type = "prob")
+pred.bestmodel.test = predict(rf_model.under.transf, newdata = test_data_transf, type = "prob")
+
+tr_data.best <- train_data_transf
+tr_data.best <- select(tr_data.best, -Target_fct)
+tr_data.best$Pred.Proby.1 <- pred.bestmodel.train[,1]
+
+ts_data.best <- test_data_transf
+ts_data.best$Pred.Proby.1 <- pred.bestmodel.test[,1]
+
+data_sample_transf.best <- rbind(tr_data.best, ts_data.best)
+write.csv(data_sample_transf.best, '/Users/klemanroy/Downloads/applications/savii/data/data_sample_transf.best.csv')
+```
+
+
+
 #### Output Consolidation
 
 ```{r predicted probabilities}
